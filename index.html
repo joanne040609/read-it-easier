@@ -89,6 +89,14 @@ button{cursor:pointer}
 .termbox .full{font-size:14px;font-weight:600;margin:2px 0}
 .termbox p{margin:4px 0;font-size:14px;line-height:1.75}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.refbox{margin-top:12px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.7}
+.refbox h3{margin:0 0 4px;font-size:13px;color:var(--muted)}
+.refbox a{color:var(--accent);text-decoration:none;word-break:break-word}
+.refbox a:hover{text-decoration:underline}
+.refbox ul{margin:4px 0 0;padding-left:18px}
+.refbox li{margin:3px 0}
+.refbox .src{color:var(--muted);font-size:12px}
+.refbox .row{margin:4px 0}
 .listrow{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:var(--muted);flex-wrap:wrap}
 .listrow select,.listrow input,.field input,.field select{border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:#fff;min-width:0}
 .listrow select{max-width:200px}
@@ -126,7 +134,9 @@ button{cursor:pointer}
 .sheet h3{margin:18px 0 6px;font-size:14px}
 .sheet p{font-size:13px;color:var(--muted);line-height:1.7;margin:4px 0 10px}
 .field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;font-size:13px;color:var(--muted)}
-.field input{width:100%}
+.field input,.field select{width:100%}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--muted);margin-bottom:10px;line-height:1.6}
+.check input{margin-top:4px;accent-color:var(--accent)}
 
 #sidetoggle{display:none}
 @media (max-width:860px){
@@ -197,8 +207,17 @@ button{cursor:pointer}
 <div class="modal" id="modal">
   <div class="sheet">
     <h2>設定</h2>
-    <h3>翻譯（Claude API）</h3>
-    <p>APP 版需要你自己的 Anthropic API 金鑰才能翻譯（依用量計費，與 Claude 訂閱分開）。金鑰只存在這台裝置的瀏覽器裡，不會上傳到其他地方。</p>
+    <h3>翻譯來源</h3>
+    <label class="field">選字後使用
+      <select id="s-src">
+        <option value="free">免費來源：維基百科＋PubMed（不需金鑰）</option>
+        <option value="claude">Claude（需 API 金鑰，依用量計費）</option>
+      </select>
+    </label>
+    <p><b>免費來源</b>適合查專有名詞：顯示維基百科的中文條目名稱與摘要，以及 PubMed 上的相關文獻；無法翻譯句子，一般單字的效果有限，也不會自動分類生詞。<br><b>Claude</b> 會依上下文翻譯單字、專有名詞與句子，並自動把生詞分類。</p>
+    <label class="check"><input type="checkbox" id="s-refs"> 使用 Claude 時，專有名詞也附上維基百科與 PubMed 的參考來源</label>
+    <h3>Claude API 金鑰</h3>
+    <p>使用 Claude 需要你自己的 Anthropic API 金鑰（與 Claude 訂閱分開計費）。金鑰只存在這台裝置的瀏覽器裡，不會上傳到其他地方。</p>
     <label class="field">API 金鑰<input id="s-key" type="password" placeholder="sk-ant-..." autocomplete="off"></label>
     <label class="field">單字／術語使用的模型<input id="s-mq" type="text"></label>
     <label class="field">句子與分類整理使用的模型<input id="s-md" type="text"></label>
@@ -221,7 +240,7 @@ button{cursor:pointer}
 <script>
 (function(){
 "use strict";
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 const $ = s => document.querySelector(s);
 const cur = $('#current');
 function h(tag, attrs, ...kids){
@@ -244,7 +263,10 @@ function lsSet(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); return true
    ===================================================================== */
 const inClaude = !!(window.claude && window.claude.use);
 let sample = null;
-const settings = Object.assign({apiKey:'', modelQuick:'claude-haiku-5-5', modelDefault:'claude-sonnet-5-5', auto:false}, lsGet('rie.settings.v1')||{});
+const settings = Object.assign({apiKey:'', source:'', refs:true, modelQuick:'claude-haiku-5-5', modelDefault:'claude-sonnet-5-5', auto:false}, lsGet('rie.settings.v1')||{});
+/* 'claude' or 'free'. Inside Claude it is always Claude; in the app the user chooses (default: Claude if a key is saved, else free). */
+function source(){ return inClaude ? 'claude' : (settings.source || (settings.apiKey ? 'claude' : 'free')); }
+const canFetchRefs = !inClaude;   // pages inside Claude cannot reach other sites
 const ready = (async()=>{
   if(inClaude){ try{ sample = await claude.use('sample'); }catch(e){ sample=null; } }
   else { $('#setbtn').hidden=false; }
@@ -286,6 +308,53 @@ const ERR = {
   network:'無法連線，請檢查網路。',
   unavailable:'此環境無法使用翻譯功能。'
 };
+
+/* =====================================================================
+   Free reference sources: Wikipedia (zh-tw title + summary) and PubMed
+   ===================================================================== */
+async function getJSON(url, signal, headers){
+  let r;
+  try{ r = await fetch(url,{signal, headers}); }
+  catch(e){ throw {code: e && e.name==='AbortError' ? 'cancelled' : 'network'}; }
+  if(!r.ok) throw {code: r.status===429 ? 'rate_limited' : 'network'};
+  return r.json();
+}
+async function wikiLookup(q, signal){
+  const d = await getJSON('https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1&generator=search&gsrlimit=1&gsrsearch='+encodeURIComponent(q)+'&prop=extracts%7Clanglinks%7Cinfo&exintro=1&explaintext=1&exsentences=3&lllang=zh&inprop=url', signal);
+  const pg = d && d.query && d.query.pages && Object.values(d.query.pages)[0];
+  if(!pg || !pg.title) return null;
+  const out = {title:pg.title, url:pg.fullurl||('https://en.wikipedia.org/wiki/'+encodeURIComponent(pg.title.replace(/ /g,'_'))), extract:String(pg.extract||'').trim(), zhTitle:'', zhUrl:'', zhExtract:''};
+  const ll = pg.langlinks && pg.langlinks[0] && pg.langlinks[0]['*'];
+  if(ll){
+    out.zhTitle = ll;
+    out.zhUrl = 'https://zh.wikipedia.org/zh-tw/'+encodeURIComponent(ll.replace(/ /g,'_'));
+    try{  // Accept-Language: zh-tw makes Wikipedia return Taiwan-variant Traditional Chinese
+      const z = await getJSON('https://zh.wikipedia.org/api/rest_v1/page/summary/'+encodeURIComponent(ll.replace(/ /g,'_')), signal, {'Accept-Language':'zh-tw'});
+      if(z && z.title){ out.zhTitle = String(z.title); out.zhExtract = String(z.extract||'').trim(); }
+    }catch(e){ if(e && e.code==='cancelled') throw e; }
+  }
+  return out;
+}
+async function pubmedLookup(q, signal){
+  const term = '"'+q.replace(/"/g,'')+'"[Title/Abstract]';
+  const base = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/';
+  const s = await getJSON(base+'esearch.fcgi?db=pubmed&retmode=json&retmax=3&sort=relevance&term='+encodeURIComponent(term), signal);
+  const er = (s && s.esearchresult) || {};
+  const ids = Array.isArray(er.idlist) ? er.idlist : [];
+  let items = [];
+  if(ids.length){
+    try{
+      const m = await getJSON(base+'esummary.fcgi?db=pubmed&retmode=json&id='+ids.join(','), signal);
+      items = ids.map(id=>m.result && m.result[id]).filter(Boolean).map(x=>({pmid:String(x.uid), title:String(x.title||''), journal:String(x.source||''), year:String(x.pubdate||'').slice(0,4)}));
+    }catch(e){ if(e && e.code==='cancelled') throw e; }
+  }
+  return {count:+er.count||0, items, url:'https://pubmed.ncbi.nlm.nih.gov/?term='+encodeURIComponent(term)};
+}
+async function fetchRefs(q, signal){
+  const [w,p] = await Promise.allSettled([wikiLookup(q,signal), pubmedLookup(q,signal)]);
+  for(const x of [w,p]) if(x.status==='rejected' && x.reason && x.reason.code==='cancelled') throw x.reason;
+  return {q, wiki: w.status==='fulfilled' ? w.value : null, pubmed: p.status==='fulfilled' ? p.value : null, failed: w.status==='rejected' && p.status==='rejected'};
+}
 
 /* =====================================================================
    PDF viewer
@@ -564,11 +633,13 @@ async function lookup(sel){
   showTab('tr');
   if(matchMedia('(max-width:860px)').matches) $('#side').classList.remove('collapsed');
   await ready;
-  if(!canAsk()){ renderIdle(); return; }
+  const src = source();
+  if(src==='claude' && !canAsk()){ renderIdle(); return; }
   lastLookedUp = sel.text;
   if(ctl) ctl.abort();
   const mine = ++reqId; ctl = new AbortController();
   renderLoading(sel.text);
+  if(src==='free'){ lookupFree(sel, mine, ctl.signal); return; }
   const ctx = await getContext(sel.text, sel.page);
   if(mine!==reqId) return;
   try{
@@ -579,10 +650,45 @@ async function lookup(sel){
     const w = long ? r : (upsertWord(r, data && data.list) || r);
     renderCard(w);
     renderVocab();
+    if(canFetchRefs && settings.refs && w.kind==='term') attachRefs(w, ctl.signal);
   }catch(e){
     if(mine!==reqId || (e && e.code==='cancelled')) return;
     renderError(ERR[e && e.code] || '翻譯失敗，請再試一次。', sel, e && e.code);
   }
+}
+/* Look a word or term up without Claude: Wikipedia for the Chinese name and summary, PubMed for usage in the literature. */
+async function lookupFree(sel, mine, signal){
+  const text = sel.text.replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9)]+$/g,'');
+  if(text.split(/\s+/).length>6 || text.length>80){
+    renderError('免費來源只能查單字與專有名詞。要翻譯句子，請到「設定」把翻譯來源改成 Claude。', sel, 'need_claude'); return;
+  }
+  try{
+    const refs = await fetchRefs(text, signal);
+    if(mine!==reqId) return;
+    if(refs.failed){ renderError(ERR.network, sel); return; }
+    const wk = refs.wiki;
+    if(!wk && !(refs.pubmed && refs.pubmed.count)){ renderError('維基百科與 PubMed 都查不到這個詞。可以換個選取範圍，或到「設定」改用 Claude。', sel, 'need_claude'); return; }
+    const r = {
+      kind:'term', original:text, pronunciation:'', pos:'',
+      translation: wk ? (wk.zhTitle || '（維基百科沒有對應的中文條目）') : '（維基百科查無條目）',
+      other:[], note:'', page:sel.page, refs, free:true,
+      term: wk ? {full: wk.title.toLowerCase()===text.toLowerCase() ? '' : wk.title, field:'', meaning: wk.zhExtract || wk.extract, related:[]} : null
+    };
+    const w = upsertWord(r, UNSORTED) || r;
+    renderCard(w); renderVocab();
+  }catch(e){
+    if(mine!==reqId || (e && e.code==='cancelled')) return;
+    renderError(ERR[e && e.code] || '查詢失敗，請再試一次。', sel, e && e.code);
+  }
+}
+async function attachRefs(w, signal){
+  try{
+    const refs = await fetchRefs((w.term && w.term.full) || w.original, signal);
+    if(refs.failed) return;
+    w.refs = refs;
+    if(w.k && store.words[w.k]){ store.words[w.k].refs = refs; saveStore(); }
+    if(w.k ? cur.dataset.k===w.k : cur.dataset.o===w.original) renderCard(w.k && store.words[w.k] || w);
+  }catch(e){}
 }
 
 /* =====================================================================
@@ -592,8 +698,12 @@ const KIND = {word:'單字',term:'專有名詞',phrase:'詞組',sentence:'句子
 function renderIdle(){
   cur.textContent='';
   if(inClaude && !sample){ cur.append(h('div',{class:'hint'},'此環境無法使用翻譯功能（仍可閱讀 PDF 與查看生詞表）。')); return; }
-  if(!inClaude && !settings.apiKey){
-    cur.append(h('div',{class:'hint'},'要使用翻譯，請先設定 Claude API 金鑰。',h('div',{class:'actions'},h('button',{class:'btn primary sm',onclick:openSettings},'前往設定'))));
+  if(source()==='claude' && !inClaude && !settings.apiKey){
+    cur.append(h('div',{class:'hint'},'翻譯來源設為 Claude，但還沒有填 API 金鑰。請到設定填入金鑰，或改用免費來源（維基百科＋PubMed）。',h('div',{class:'actions'},h('button',{class:'btn primary sm',onclick:openSettings},'前往設定'))));
+    return;
+  }
+  if(source()==='free'){
+    cur.append(h('div',{class:'hint'},'在 PDF 中',h('b',null,'選取單字或專有名詞'),'，再按出現的「翻譯」按鈕。',h('br'),'目前使用免費來源：顯示維基百科的中文條目與摘要，以及 PubMed 上的相關文獻。要依上下文翻譯、翻譯句子或自動分類生詞，可到「設定」改用 Claude。',h('div',{class:'actions'},h('button',{class:'btn sm',onclick:openSettings},'設定'))));
     return;
   }
   cur.append(h('div',{class:'hint'},'在 PDF 中',h('b',null,'選取文字'),'（滑鼠拖曳、雙擊單字，或手機長按），再按出現的「翻譯」按鈕。也可以打開上方的「自動翻譯」。',h('br'),'查過的單字與專有名詞會自動收進「生詞表」，並依研究方向分類。'));
@@ -611,7 +721,7 @@ function renderError(msg, sel, code){
     h('p',{class:'err'},msg),
     h('div',{class:'actions'},
       h('button',{class:'btn sm',onclick:()=>lookup(sel)},'再試一次'),
-      (code==='no_key'||code==='bad_key'||code==='bad_model') && h('button',{class:'btn sm',onclick:openSettings},'設定'))));
+      (code==='no_key'||code==='bad_key'||code==='bad_model'||code==='need_claude') && h('button',{class:'btn sm',onclick:openSettings},'設定'))));
 }
 function copyText(t){ try{ navigator.clipboard.writeText(t).then(()=>toast('已複製'),()=>toast('無法複製')); }catch(e){ toast('無法複製'); } }
 function starButton(w){
@@ -646,9 +756,25 @@ function moveWord(w, list){
   w.list=list; w.manual=true; pruneLists(); saveStore();
   renderVocab(); renderCard(w); toast('已移到「'+list+'」');
 }
+function link(href, text){ return h('a',{href, target:'_blank', rel:'noopener noreferrer'}, text); }
+function refsBox(r){
+  const f = r.refs; if(!f) return null;
+  const wk = f.wiki, pm = f.pubmed;
+  if(!wk && !(pm && (pm.count || pm.items.length))) return null;
+  return h('div',{class:'refbox'},
+    h('h3',null,'參考來源'),
+    wk && h('div',{class:'row'}, '維基百科：',
+      wk.zhUrl ? link(wk.zhUrl, wk.zhTitle) : h('span',{class:'src'},'沒有中文條目'),
+      '　', link(wk.url, wk.title+'（英文）'),
+      r.free && h('div',{class:'src'},'上方的名稱與說明摘自維基百科（CC BY-SA），為條目內容而非依上下文的翻譯，請確認條目與原文所指相同。')),
+    pm && h('div',{class:'row'}, 'PubMed：', link(pm.url, pm.count ? '標題或摘要含此詞的文獻約 '+pm.count.toLocaleString()+' 篇' : '查無文獻'),
+      pm.items.length>0 && h('ul',null, pm.items.map(x=>h('li',null, link('https://pubmed.ncbi.nlm.nih.gov/'+x.pmid+'/', x.title), ' ', h('span',{class:'src'},[x.journal,x.year].filter(Boolean).join(' '))))))
+  );
+}
 function renderCard(r){
   const saved = !!(r.k && store.words[r.k]);
   cur.dataset.k = saved ? r.k : '';
+  cur.dataset.o = r.original;
   const long = r.kind==='sentence' || r.original.length>60;
   const meta = h('div',{class:'meta'},
     h('span',{class:'chip'+(r.kind==='term'?' term':' plain')},KIND[r.kind]),
@@ -662,14 +788,16 @@ function renderCard(r){
     h('div',{class:'trans'},r.translation),
     r.other && r.other.length>0 && h('div',{class:'sub'},h('b',null,'其他詞義　'),r.other.join('；')),
     r.term && h('div',{class:'termbox'},
-      h('h3',null,'專有名詞說明', r.term.field && h('span',{class:'chip term'},r.term.field)),
+      h('h3',null, r.free ? '維基百科摘要' : '專有名詞說明', r.term.field && h('span',{class:'chip term'},r.term.field)),
       r.term.full && h('div',{class:'full'},r.term.full),
       r.term.meaning && h('p',null,r.term.meaning),
       r.term.related.length>0 && h('div',{class:'chips'},r.term.related.map(x=>h('span',{class:'chip plain'},x)))),
     r.note && h('div',{class:'sub'},h('b',null,'補充　'),r.note),
+    refsBox(r),
     saved && listPicker(r),
     h('div',{class:'actions'},
       h('button',{class:'btn sm',onclick:()=>copyText(r.original+'\n'+r.translation+(r.term&&r.term.meaning?'\n'+r.term.meaning:''))},'複製'),
+      canFetchRefs && !r.refs && !long && h('button',{class:'btn sm',onclick:e=>{ e.target.disabled=true; e.target.textContent='查詢中…'; attachRefs(r).then(()=>{ if(!r.refs){ e.target.textContent='查不到參考來源'; } }); }},'查維基百科與 PubMed'),
       saved && h('button',{class:'btn sm danger',onclick:()=>{ delete store.words[r.k]; pruneLists(); saveStore(); renderVocab(); renderIdle(); toast('已從生詞表移除'); }},'從生詞表移除')));
   cur.textContent=''; cur.append(card);
 }
@@ -791,6 +919,7 @@ ${locked.map(n=>'- '+n).join('\n')||'（無）'}
    Settings (standalone app only)
    ===================================================================== */
 function openSettings(){
+  $('#s-src').value=source(); $('#s-refs').checked=!!settings.refs;
   $('#s-key').value=settings.apiKey; $('#s-mq').value=settings.modelQuick; $('#s-md').value=settings.modelDefault;
   $('#modal').classList.add('show');
 }
@@ -800,10 +929,12 @@ $('#s-cancel').onclick=closeSettings;
 $('#modal').addEventListener('click',e=>{ if(e.target.id==='modal') closeSettings(); });
 $('#s-save').onclick=()=>{
   settings.apiKey=$('#s-key').value.trim();
+  settings.source=$('#s-src').value==='claude'?'claude':'free'; settings.refs=$('#s-refs').checked;
   settings.modelQuick=$('#s-mq').value.trim()||'claude-haiku-5-5';
   settings.modelDefault=$('#s-md').value.trim()||'claude-sonnet-5-5';
-  lsSet('rie.settings.v1',settings); closeSettings(); toast('已儲存');
-  if(!cur.dataset.k) renderIdle();
+  lsSet('rie.settings.v1',settings); closeSettings();
+  toast(settings.source==='claude' && !settings.apiKey ? '已儲存。使用 Claude 前請填入 API 金鑰' : '已儲存');
+  if(!cur.querySelector('.card')) renderIdle();
   renderVocab();
 };
 function download(name, text, type){
