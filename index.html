@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Read It Easier</title>
+<meta name="description" content="幫助繁體中文使用者閱讀英文文獻：選字翻譯、專有名詞說明、分類生詞表。">
+<meta name="theme-color" content="#1f6f6b">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+:root{
+  --bg:#f3f1ec; --panel:#fbfaf7; --ink:#26241f; --muted:#7a766c; --line:#e2dfd6;
+  --accent:#1f6f6b; --accent-soft:#e3f0ee; --term:#fdf3dc; --term-line:#ecd9a6; --danger:#b3412f; --star:#e0a100;
+  --shadow:0 8px 24px rgba(40,36,25,.14);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg);overflow:hidden}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+.app{display:grid;grid-template-rows:auto 1fr;height:100dvh}
+
+/* top bar */
+.bar{display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.brand{font-weight:700;letter-spacing:.01em;margin-right:6px;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.brand i{width:22px;height:22px;border-radius:6px;background:var(--accent);display:inline-block;position:relative}
+.brand i::after{content:"譯";position:absolute;inset:0;color:#fff;font-size:13px;line-height:22px;text-align:center;font-style:normal}
+.btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 12px;line-height:1.2;white-space:nowrap}
+.btn:hover{border-color:#cfcabd}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.sm{padding:4px 9px;font-size:13px}
+.btn.danger{color:var(--danger)}
+.btn:disabled{opacity:.45;cursor:default}
+.tools{display:flex;align-items:center;gap:6px;margin-left:auto}
+.tools input[type=number]{width:54px;padding:5px 6px;border:1px solid var(--line);border-radius:8px;background:#fff;text-align:center}
+.tools .sep{color:var(--muted);font-size:13px}
+.zoomlbl{min-width:46px;text-align:center;font-size:13px;color:var(--muted)}
+.fname{max-width:22vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:13px}
+
+/* layout */
+.layout{display:grid;grid-template-columns:1fr 390px;min-height:0}
+.viewer{overflow:auto;position:relative;padding:18px 0 80px}
+.viewer.drag{outline:3px dashed var(--accent);outline-offset:-10px}
+.page{position:relative;margin:0 auto 14px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.18),0 6px 20px rgba(0,0,0,.06)}
+.page canvas{display:block;position:absolute;inset:0}
+.page .ph{position:absolute;right:10px;bottom:6px;font-size:11px;color:#b9b5aa}
+.textLayer{position:absolute;inset:0;overflow:hidden;line-height:1;text-size-adjust:none;forced-color-adjust:none;transform-origin:0 0}
+.textLayer span,.textLayer br{color:transparent;position:absolute;white-space:pre;cursor:text;transform-origin:0% 0%}
+.textLayer ::selection{background:rgba(31,111,107,.35)}
+.textLayer .endOfContent{display:block;position:absolute;inset:100% 0 0;z-index:-1;cursor:default;user-select:none}
+
+.empty{max-width:520px;margin:12vh auto 0;text-align:center;padding:0 20px}
+.empty h1{font-size:22px;margin:0 0 8px}
+.empty p{color:var(--muted);line-height:1.7;margin:6px 0}
+.drop{margin:22px 0 8px;border:2px dashed #cfcabd;border-radius:16px;padding:34px 16px;background:rgba(255,255,255,.55)}
+.drop b{display:block;margin-bottom:12px}
+.banner{margin:0 auto 12px;max-width:720px;background:var(--term);border:1px solid var(--term-line);border-radius:10px;padding:10px 14px;font-size:14px;line-height:1.6}
+
+/* sidebar */
+.side{background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.tabs{display:flex;border-bottom:1px solid var(--line);padding:0 8px;gap:2px;align-items:stretch}
+.tab{border:0;background:none;padding:12px 12px 10px;font-size:15px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab.on{color:var(--ink);font-weight:700;border-bottom-color:var(--accent)}
+.tabs .switch{margin-left:auto}
+.switch{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);user-select:none;cursor:pointer;padding-right:8px}
+.switch input{accent-color:var(--accent)}
+.side-body{overflow:auto;padding:14px 16px 24px;flex:1}
+.hint{color:var(--muted);line-height:1.75;font-size:14px;padding:6px 2px}
+
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 15px;animation:in .18s ease-out}
+@keyframes in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.card-top{display:flex;gap:8px;align-items:flex-start}
+.card .orig{font-size:19px;font-weight:700;line-height:1.35;word-break:break-word;flex:1}
+.card .orig.long{font-size:14px;font-weight:500;color:var(--muted);font-style:italic}
+.starbtn{border:0;background:none;font-size:22px;line-height:1;padding:2px 4px;color:#c9c5b8}
+.starbtn.on{color:var(--star)}
+.meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0 2px;font-size:13px;color:var(--muted)}
+.chip{display:inline-block;padding:1px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:12px;line-height:1.7}
+.chip.term{background:var(--term);color:#8a5a00;border:1px solid var(--term-line)}
+.chip.plain{background:#f0eee8;color:#5d594f}
+.trans{font-size:18px;line-height:1.6;margin:10px 0 4px}
+.sub{font-size:13px;color:var(--muted);line-height:1.7;margin-top:8px}
+.sub b{color:var(--ink);font-weight:600}
+.termbox{margin-top:12px;background:var(--term);border:1px solid var(--term-line);border-radius:12px;padding:10px 12px}
+.termbox h3{margin:0 0 4px;font-size:13px;color:#8a5a00;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.termbox .full{font-size:14px;font-weight:600;margin:2px 0}
+.termbox p{margin:4px 0;font-size:14px;line-height:1.75}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.listrow{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:var(--muted);flex-wrap:wrap}
+.listrow select,.listrow input,.field input,.field select{border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:#fff;min-width:0}
+.listrow select{max-width:200px}
+.actions{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+.skel{height:14px;border-radius:7px;background:linear-gradient(90deg,#eeece5,#f7f6f1,#eeece5);background-size:200% 100%;animation:sh 1.2s infinite;margin:10px 0}
+@keyframes sh{to{background-position:-200% 0}}
+.err{color:var(--danger);font-size:14px;line-height:1.7}
+
+/* vocab */
+.filters{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.fchip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 10px;font-size:13px;line-height:1.5}
+.fchip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.fchip small{opacity:.7;margin-left:3px}
+.vtools{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
+.vlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.vlist li{border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 8px 8px 4px;display:grid;grid-template-columns:auto 1fr auto;gap:0 4px;align-items:center;font-size:14px;cursor:pointer}
+.vlist li:hover{border-color:#c9c4b6}
+.vlist .starbtn{font-size:18px}
+.vlist .o{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vlist .t{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.vlist .l{font-size:11px;color:#a29e92;text-align:right;max-width:92px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.suggest{background:var(--accent-soft);border-radius:10px;padding:9px 12px;font-size:13px;line-height:1.6;margin-bottom:12px;display:flex;gap:8px;align-items:center;justify-content:space-between}
+
+/* floating translate button */
+#fab{position:fixed;z-index:20;display:none;box-shadow:var(--shadow);border-radius:999px;padding:7px 16px;background:var(--accent);color:#fff;border:0;font-size:14px}
+#fab.show{display:block}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#2b2923;color:#fff;padding:8px 14px;border-radius:999px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:40}
+.toast.show{opacity:.95}
+
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(30,28,22,.45);z-index:35;display:none;align-items:center;justify-content:center;padding:16px}
+.modal.show{display:flex}
+.sheet{background:var(--panel);border-radius:16px;max-width:460px;width:100%;padding:20px;box-shadow:var(--shadow);max-height:90dvh;overflow:auto}
+.sheet h2{margin:0 0 12px;font-size:17px}
+.sheet h3{margin:18px 0 6px;font-size:14px}
+.sheet p{font-size:13px;color:var(--muted);line-height:1.7;margin:4px 0 10px}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;font-size:13px;color:var(--muted)}
+.field input{width:100%}
+
+#sidetoggle{display:none}
+@media (max-width:860px){
+  .layout{grid-template-columns:1fr}
+  .side{position:fixed;left:0;right:0;bottom:0;height:52dvh;border-left:0;border-top:1px solid var(--line);box-shadow:0 -10px 30px rgba(40,36,25,.14);z-index:15;border-radius:16px 16px 0 0;transition:transform .22s}
+  .side.collapsed{transform:translateY(calc(100% - 46px))}
+  .viewer{padding-bottom:54dvh}
+  #sidetoggle{display:inline-block}
+  .tools{margin-left:0;gap:4px}
+  .zoomlbl{min-width:38px}
+  .tools input[type=number]{width:44px}
+  .fname{display:none}
+  .brand span{display:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <div class="brand"><i></i><span>Read It Easier</span></div>
+    <label class="btn primary" for="file">開啟 PDF</label>
+    <input id="file" type="file" accept="application/pdf,.pdf" hidden>
+    <span class="fname" id="fname"></span>
+    <div class="tools">
+      <button class="btn sm" id="zout" title="縮小" disabled>−</button>
+      <span class="zoomlbl" id="zlbl">—</span>
+      <button class="btn sm" id="zin" title="放大" disabled>＋</button>
+      <button class="btn sm" id="zfit" title="符合寬度" disabled>符合寬度</button>
+      <span class="sep">|</span>
+      <input id="pg" type="number" min="1" value="1" disabled aria-label="頁碼">
+      <span class="sep" id="pgtot">/ –</span>
+      <button class="btn sm" id="sidetoggle">面板</button>
+      <button class="btn sm" id="setbtn" title="設定" hidden>設定</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <main class="viewer" id="viewer">
+      <div class="empty" id="empty">
+        <h1>用中文輔助閱讀英文文獻</h1>
+        <p>上傳 PDF 後，直接在文件中選取英文單字、專有名詞或句子，側邊欄會顯示繁體中文翻譯；若是專有名詞，還會簡述它在實驗或研究中的意義。查過的詞會自動收進依研究方向分類的生詞表。</p>
+        <div class="drop"><b>把 PDF 拖曳到這裡</b><label class="btn primary" for="file">選擇檔案</label></div>
+        <p style="font-size:13px">PDF 只在你的裝置上開啟，不會上傳；只有你選取的文字（與周圍一小段上下文）會送給 Claude 翻譯。</p>
+      </div>
+    </main>
+
+    <aside class="side" id="side">
+      <div class="tabs">
+        <button class="tab on" id="tab-tr" data-tab="tr">翻譯</button>
+        <button class="tab" id="tab-vo" data-tab="vo">生詞表 <small id="vcount"></small></button>
+        <label class="switch"><input type="checkbox" id="auto"> 自動翻譯</label>
+      </div>
+      <div class="side-body" id="pane-tr">
+        <div id="current"></div>
+      </div>
+      <div class="side-body" id="pane-vo" hidden>
+        <div id="suggest"></div>
+        <div class="filters" id="filters"></div>
+        <div class="vtools" id="vtools"></div>
+        <ul class="vlist" id="vlist"></ul>
+      </div>
+    </aside>
+  </div>
+</div>
+<button id="fab" type="button">翻譯</button>
+<div class="toast" id="toast"></div>
+
+<div class="modal" id="modal">
+  <div class="sheet">
+    <h2>設定</h2>
+    <h3>翻譯（Claude API）</h3>
+    <p>APP 版需要你自己的 Anthropic API 金鑰才能翻譯（依用量計費，與 Claude 訂閱分開）。金鑰只存在這台裝置的瀏覽器裡，不會上傳到其他地方。</p>
+    <label class="field">API 金鑰<input id="s-key" type="password" placeholder="sk-ant-..." autocomplete="off"></label>
+    <label class="field">單字／術語使用的模型<input id="s-mq" type="text"></label>
+    <label class="field">句子與分類整理使用的模型<input id="s-md" type="text"></label>
+    <h3>生詞表備份</h3>
+    <p>生詞表存在這台裝置上。要搬到另一台裝置（例如手機），先在這裡匯出備份檔，再到另一台匯入；匯入會與現有生詞合併。</p>
+    <div class="actions" style="margin-top:0">
+      <button class="btn sm" id="s-export">匯出備份檔</button>
+      <label class="btn sm" for="s-import">匯入備份檔</label>
+      <input id="s-import" type="file" accept="application/json,.json" hidden>
+      <button class="btn sm" id="s-tsv">匯出成表格（TSV）</button>
+    </div>
+    <div class="actions" style="justify-content:flex-end;margin-top:20px">
+      <button class="btn" id="s-cancel">取消</button>
+      <button class="btn primary" id="s-save">儲存</button>
+    </div>
+  </div>
+</div>
+
+<script src="vendor/pdf.min.js"></script>
+<script>
+(function(){
+"use strict";
+const APP_VERSION = '1.0.0';
+const $ = s => document.querySelector(s);
+const cur = $('#current');
+function h(tag, attrs, ...kids){
+  const e = document.createElement(tag);
+  for(const [k,v] of Object.entries(attrs||{})){
+    if(k==='class') e.className=v;
+    else if(k.startsWith('on')) e.addEventListener(k.slice(2),v);
+    else if(v!==false && v!=null) e.setAttribute(k,v===true?'':v);
+  }
+  for(const c of kids.flat()){ if(c==null||c===false||c==='') continue; e.append(c.nodeType?c:document.createTextNode(String(c))); }
+  return e;
+}
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('show'),1800); }
+function lsGet(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); return true; }catch(e){ return false; } }
+
+/* =====================================================================
+   Asking Claude: inside Claude (artifact) → the viewer's Claude account;
+   as a standalone app → the user's own API key.
+   ===================================================================== */
+const inClaude = !!(window.claude && window.claude.use);
+let sample = null;
+const settings = Object.assign({apiKey:'', modelQuick:'claude-haiku-5-5', modelDefault:'claude-sonnet-5-5', auto:false}, lsGet('rie.settings.v1')||{});
+const ready = (async()=>{
+  if(inClaude){ try{ sample = await claude.use('sample'); }catch(e){ sample=null; } }
+  else { $('#setbtn').hidden=false; }
+  renderIdle();
+})();
+function canAsk(){ return !!sample || (!inClaude && !!settings.apiKey); }
+function parseJSON(text){
+  try{ return JSON.parse(text); }catch(e){}
+  const a=text.indexOf('{'), b=text.lastIndexOf('}');
+  if(a>=0 && b>a){ try{ return JSON.parse(text.slice(a,b+1)); }catch(e){} }
+  throw {code:'invalid_json'};
+}
+async function askJSON(prompt, tier, signal){
+  if(sample) return sample.json(prompt,{modelTier:tier, signal});
+  if(inClaude) throw {code:'unavailable'};
+  if(!settings.apiKey) throw {code:'no_key'};
+  let res;
+  try{
+    res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST', signal,
+      headers:{'content-type':'application/json','x-api-key':settings.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model: tier==='quick'?settings.modelQuick:settings.modelDefault, max_tokens: tier==='quick'?1500:8000, messages:[{role:'user',content:prompt}]})
+    });
+  }catch(e){ throw {code: e && e.name==='AbortError' ? 'cancelled' : 'network'}; }
+  if(!res.ok) throw {code: res.status===401||res.status===403 ? 'bad_key' : res.status===404 ? 'bad_model' : res.status===429 ? 'rate_limited' : 'upstream_error'};
+  const j = await res.json();
+  return parseJSON((j.content||[]).filter(c=>c.type==='text').map(c=>c.text).join(''));
+}
+const ERR = {
+  not_granted:'需要允許此頁面使用 Claude 才能翻譯。',
+  sampling_disabled:'目前的帳號或組織無法使用 Claude。',
+  rate_limited:'查詢太頻繁或已達用量上限，請稍後再試。',
+  session_expired:'登入已過期，請重新登入 Claude。',
+  invalid_json:'這次的回覆格式有誤，請再試一次。',
+  refused:'這段內容無法處理，請換一段試試。',
+  no_key:'尚未設定 API 金鑰，請先到「設定」填入。',
+  bad_key:'API 金鑰無效，請到「設定」檢查。',
+  bad_model:'找不到設定中的模型名稱，請到「設定」檢查。',
+  network:'無法連線，請檢查網路。',
+  unavailable:'此環境無法使用翻譯功能。'
+};
+
+/* =====================================================================
+   PDF viewer
+   ===================================================================== */
+const pdfjsLib = window['pdfjs-dist/build/pdf'] || window.pdfjsLib;
+if(pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js';
+const viewer = $('#viewer');
+let pdfDoc=null, docName='', scale=1.3, gen=0, pageEls=[], pageTexts={}, observer=null, baseSize=null, textCount=0, renderedCount=0, bannerShown=false;
+
+function setControls(on){ ['#zout','#zin','#zfit','#pg'].forEach(s=>$(s).disabled=!on); }
+function updZoomLabel(){ $('#zlbl').textContent = pdfDoc ? Math.round(scale*100)+'%' : '—'; }
+
+async function openFile(file){
+  if(!file) return;
+  if(!pdfjsLib){ toast('PDF 引擎載入失敗，請重新整理'); return; }
+  if(!/pdf$/i.test(file.name) && file.type!=='application/pdf'){ toast('請選擇 PDF 檔案'); return; }
+  try{
+    const buf = new Uint8Array(await file.arrayBuffer());
+    const doc = await pdfjsLib.getDocument({data:buf}).promise;
+    pdfDoc = doc; pageTexts={}; textCount=0; renderedCount=0; bannerShown=false;
+    docName = file.name.replace(/\.pdf$/i,'');
+    $('#fname').textContent = file.name; $('#fname').title=file.name;
+    const p1 = await doc.getPage(1);
+    const vp1 = p1.getViewport({scale:1});
+    baseSize = {w:vp1.width,h:vp1.height};
+    $('#pg').max = doc.numPages; $('#pg').value = 1; $('#pgtot').textContent = '/ '+doc.numPages;
+    setControls(true);
+    fitWidth(false);
+    buildPages();
+  }catch(e){
+    console.error(e);
+    toast(e && e.name==='PasswordException' ? '此 PDF 有密碼保護，暫不支援' : '無法開啟此 PDF');
+  }
+}
+function fitWidth(rebuild=true){
+  if(!baseSize) return;
+  const avail = viewer.clientWidth - (window.innerWidth<=860 ? 16 : 56);
+  scale = Math.max(.5, Math.min(3, avail/baseSize.w));
+  updZoomLabel();
+  if(rebuild) buildPages();
+}
+function setScale(s){ scale = Math.max(.5, Math.min(3.5, s)); updZoomLabel(); buildPages(true); }
+
+function buildPages(keepPos){
+  const myGen = ++gen;
+  const ratio = keepPos && viewer.scrollHeight>0 ? viewer.scrollTop/viewer.scrollHeight : 0;
+  if(observer) observer.disconnect();
+  viewer.textContent='';
+  pageEls=[];
+  const w = baseSize.w*scale, hgt = baseSize.h*scale;
+  const frag = document.createDocumentFragment();
+  for(let n=1;n<=pdfDoc.numPages;n++){
+    const d = h('div',{class:'page','data-page':n}); d.style.width=w+'px'; d.style.height=hgt+'px';
+    d.append(h('span',{class:'ph'},n));
+    frag.append(d); pageEls.push(d);
+  }
+  viewer.append(frag);
+  viewer.scrollTop = ratio*viewer.scrollHeight;
+  observer = new IntersectionObserver(es=>{
+    for(const en of es) if(en.isIntersecting) renderPage(+en.target.dataset.page, myGen);
+  },{root:viewer,rootMargin:'900px 0px'});
+  pageEls.forEach(el=>observer.observe(el));
+  updateCurrentPage();
+}
+
+async function renderPage(n, myGen){
+  const el = pageEls[n-1];
+  if(!el || el.dataset.done==='1' || el.dataset.busy==='1') return;
+  el.dataset.busy='1';
+  try{
+    const page = await pdfDoc.getPage(n);
+    if(myGen!==gen) return;
+    const vp = page.getViewport({scale});
+    el.style.width=vp.width+'px'; el.style.height=vp.height+'px';
+    const dpr = Math.min(window.devicePixelRatio||1, 2);
+    const cv = document.createElement('canvas');
+    cv.width=Math.floor(vp.width*dpr); cv.height=Math.floor(vp.height*dpr);
+    cv.style.width=vp.width+'px'; cv.style.height=vp.height+'px';
+    const task = page.render({canvasContext:cv.getContext('2d'),viewport:vp,transform:dpr!==1?[dpr,0,0,dpr,0,0]:null});
+    const tc = await page.getTextContent();
+    pageTexts[n] = tc.items.map(i=>i.str).join(' ').replace(/\s+/g,' ');
+    textCount += tc.items.reduce((a,i)=>a+i.str.trim().length,0);
+    await task.promise;
+    if(myGen!==gen) return;
+    const tl = h('div',{class:'textLayer'});
+    tl.style.setProperty('--scale-factor', vp.scale);
+    el.textContent=''; el.append(cv, tl);
+    const divs = [];
+    await pdfjsLib.renderTextLayer({textContentSource:tc, container:tl, viewport:vp, textDivs:divs}).promise;
+    alignSpans(divs, tc.items, vp.scale);
+    tl.append(h('div',{class:'endOfContent'}));
+    el.dataset.done='1';
+    renderedCount++;
+    if(!bannerShown && renderedCount>=Math.min(2,pdfDoc.numPages) && textCount<20){
+      bannerShown=true;
+      viewer.prepend(h('div',{class:'banner'},'這份 PDF 看起來是掃描影像，沒有可選取的文字層，因此無法選字翻譯。請改用含文字層的 PDF，或先用 OCR 工具處理後再上傳。'));
+    }
+  }catch(e){ if(e && e.name!=='RenderingCancelledException') console.error(e); }
+  finally{ delete el.dataset.busy; }
+}
+/* make each selectable span exactly as wide as the glyphs drawn on the canvas */
+function alignSpans(divs, items, sc){
+  if(divs.length!==items.length) return;
+  const w = divs.map(d=>d.offsetWidth);
+  for(let i=0;i<divs.length;i++){
+    const it = items[i], d = divs[i];
+    if(!it.str || !it.str.trim() || !w[i]) continue;
+    const target = it.width*sc;
+    if(!(target>0)) continue;
+    const k = Math.max(.3, Math.min(3, target/w[i]));
+    const t = d.style.transform || '';
+    d.style.transform = /scaleX\([^)]*\)/.test(t) ? t.replace(/scaleX\([^)]*\)/,'scaleX('+k.toFixed(4)+')') : (t+' scaleX('+k.toFixed(4)+')').trim();
+  }
+}
+
+let rafP=0;
+function updateCurrentPage(){
+  if(!pdfDoc||!pageEls.length) return;
+  const line = viewer.scrollTop + viewer.clientHeight*0.35;
+  let c=1;
+  for(let i=0;i<pageEls.length;i++){ if(pageEls[i].offsetTop <= line) c=i+1; else break; }
+  if(document.activeElement!==$('#pg')) $('#pg').value=c;
+}
+viewer.addEventListener('scroll',()=>{ cancelAnimationFrame(rafP); rafP=requestAnimationFrame(updateCurrentPage); hideFab(); },{passive:true});
+$('#pg').addEventListener('change',e=>{
+  const n = Math.max(1,Math.min(pdfDoc.numPages,+e.target.value||1));
+  e.target.value=n; pageEls[n-1].scrollIntoView({block:'start'}); viewer.scrollTop -= 10;
+});
+$('#file').addEventListener('change',e=>{ openFile(e.target.files[0]); e.target.value=''; });
+$('#zin').onclick=()=>setScale(scale*1.15);
+$('#zout').onclick=()=>setScale(scale/1.15);
+$('#zfit').onclick=()=>fitWidth(true);
+$('#sidetoggle').onclick=()=>$('#side').classList.toggle('collapsed');
+['dragenter','dragover'].forEach(t=>document.addEventListener(t,e=>{ e.preventDefault(); viewer.classList.add('drag'); }));
+document.addEventListener('dragleave',e=>{ e.preventDefault(); if(!e.relatedTarget) viewer.classList.remove('drag'); });
+document.addEventListener('drop',e=>{ e.preventDefault(); viewer.classList.remove('drag'); const f=e.dataTransfer&&e.dataTransfer.files[0]; if(f) openFile(f); });
+
+/* =====================================================================
+   Selection → floating button
+   ===================================================================== */
+const fab = $('#fab');
+let pointerDown=false, lastLookedUp='', curSel=null;
+function hideFab(){ fab.classList.remove('show'); }
+function cleanText(t){ return t.replace(/-\s*[\r\n]+\s*/g,'').replace(/[\r\n]+/g,' ').replace(/\s+/g,' ').trim(); }
+function readSelection(){
+  const sel = window.getSelection();
+  if(!sel || sel.isCollapsed || !sel.rangeCount) return null;
+  const range = sel.getRangeAt(0);
+  const node = range.startContainer.nodeType===1 ? range.startContainer : range.startContainer.parentElement;
+  if(!node || !node.closest || !node.closest('.textLayer')) return null;
+  const text = cleanText(sel.toString());
+  if(!text || !/[A-Za-z]/.test(text)) return null;
+  return {text: text.slice(0,800), page: +node.closest('.page').dataset.page, rect: range.getBoundingClientRect()};
+}
+function checkSelection(allowAuto){
+  const s = readSelection();
+  if(!s){ hideFab(); curSel=null; return; }
+  curSel = s;
+  const bw = 78;
+  const left = Math.min(Math.max(8, s.rect.left + s.rect.width/2 - bw/2), window.innerWidth-bw-8);
+  let top = s.rect.top - 46; if(top<64) top = s.rect.bottom + 10;
+  fab.style.left=left+'px'; fab.style.top=top+'px';
+  fab.classList.add('show');
+  if(allowAuto && $('#auto').checked && s.text!==lastLookedUp) lookup(s);
+}
+viewer.addEventListener('pointerdown',()=>{ pointerDown=true; });
+document.addEventListener('pointerup',()=>{ pointerDown=false; setTimeout(()=>checkSelection(true),30); });
+document.addEventListener('keyup',e=>{ if(e.key && (e.key.startsWith('Arrow')||e.key==='Shift')) checkSelection(false); });
+let selT; document.addEventListener('selectionchange',()=>{ clearTimeout(selT); selT=setTimeout(()=>{ if(!pointerDown) checkSelection(false); },350); });
+fab.addEventListener('mousedown',e=>e.preventDefault());
+fab.addEventListener('pointerdown',e=>e.stopPropagation());
+fab.addEventListener('click',()=>{ if(curSel){ lookup(curSel); hideFab(); } });
+$('#auto').checked = !!settings.auto;
+$('#auto').addEventListener('change',e=>{ settings.auto=e.target.checked; lsSet('rie.settings.v1',settings); });
+
+/* =====================================================================
+   Vocabulary store (kept on this device)
+   ===================================================================== */
+const GENERAL='英語學術寫作常用字', UNSORTED='未分類', LS_VOCAB='rie.vocab.v1';
+let store = {v:1, words:{}, lists:[{name:GENERAL, locked:true}]};
+(function(){ const s=lsGet(LS_VOCAB); if(s && s.words && Array.isArray(s.lists)) store=s; })();
+function saveStore(){ if(!lsSet(LS_VOCAB,store)) toast('無法儲存生詞表（瀏覽器儲存空間不可用）'); }
+function norm(s){ return s.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(); }
+function cleanName(n){ return String(n||'').replace(/[\r\n\t]+/g,' ').trim().slice(0,24); }
+function ensureList(name, locked){
+  name = cleanName(name) || UNSORTED;
+  const l = store.lists.find(x=>x.name===name);
+  if(!l) store.lists.push({name, locked:!!locked}); else if(locked) l.locked=true;
+  return name;
+}
+function allWords(){ return Object.values(store.words).sort((a,b)=>(b.t||0)-(a.t||0)); }
+function listCounts(){
+  const m = new Map(store.lists.map(l=>[l.name,0]));
+  for(const w of Object.values(store.words)) m.set(w.list,(m.get(w.list)||0)+1);
+  return m;
+}
+function pruneLists(){
+  const c = listCounts();
+  store.lists = store.lists.filter(l=>l.locked || (c.get(l.name)||0)>0);
+}
+function upsertWord(r, suggestedList){
+  const k = norm(r.original); if(!k) return null;
+  const old = store.words[k];
+  const w = Object.assign({}, r, {k, t:Date.now(), n:(old?old.n:0)+1, starred: old?old.starred:false, manual: old?old.manual:false, doc: docName || (old&&old.doc) || ''});
+  w.list = old ? old.list : ensureList(suggestedList);
+  store.words[k]=w; saveStore(); return w;
+}
+
+/* =====================================================================
+   Lookup
+   ===================================================================== */
+let ctl=null, reqId=0;
+async function getContext(text,pageNum){
+  try{
+    let pt = pageTexts[pageNum];
+    if(!pt && pdfDoc){ const p=await pdfDoc.getPage(pageNum); const tc=await p.getTextContent(); pt=pageTexts[pageNum]=tc.items.map(i=>i.str).join(' ').replace(/\s+/g,' '); }
+    if(!pt) return '';
+    const i = pt.toLowerCase().indexOf(text.toLowerCase().slice(0,60));
+    if(i<0) return pt.slice(0,500);
+    return pt.slice(Math.max(0,i-350), i+text.length+350);
+  }catch(e){ return ''; }
+}
+function buildPrompt(text,ctx){
+  const counts = listCounts();
+  const lists = [...counts].map(([n,c])=>`- ${n}（${c} 個詞）`).join('\n');
+  return `你是協助台灣研究生閱讀英文學術文獻的翻譯與術語助理。
+使用者在論文中選取了下列文字：
+<selected>${text}</selected>
+所在位置的上下文（僅供判斷詞義與領域，不需翻譯）：
+<context>${ctx||'（無）'}</context>
+
+使用者的生詞表目前有這些清單：
+${lists}
+
+請只回傳一個 JSON 物件，不要有其他文字，格式如下：
+{
+ "kind": "word" | "term" | "phrase" | "sentence",
+ "original": "選取的原文（修正斷行或連字號造成的錯誤）",
+ "pronunciation": "單字或術語的 IPA 音標；句子則為空字串",
+ "pos": "詞性縮寫如 n. / v. / adj.；沒有則空字串",
+ "translation": "繁體中文翻譯。單字請給最符合上下文的 1–3 個譯詞；詞組或句子請給通順、完整的翻譯",
+ "other_meanings": ["其他常見詞義，最多 3 個，每個很短；沒有則空陣列"],
+ "term": null 或 {
+   "full_name": "若為縮寫，列出英文全名；否則填正式的英文名稱，沒有則空字串",
+   "field": "所屬領域，如 細胞生物學、材料科學",
+   "meaning": "2–4 句，說明這個術語的定義，並說明它在實驗或研究中的意義（例如用來測量什麼、如何使用、結果代表什麼）",
+   "related": ["相關術語，最多 4 個，格式為『中文 English』"]
+ },
+ "note": "補充說明（易混淆處、文法或慣用語氣）；沒有則空字串",
+ "list": "這個詞應收進生詞表的哪一份清單（清單名稱）"
+}
+
+規則：
+- 一般詞彙或句子的 term 必須為 null；專有名詞、學術術語、縮寫、實驗方法、試劑、儀器、基因或蛋白質名稱，kind 設為 "term" 並填寫 term。
+- list 的決定方式：非特定領域的一般學術用字、連接詞、寫作句型 → 「${GENERAL}」。專業詞彙依研究方向歸類：優先放進上面現有清單中合適的一份；都不合適才取一個新的清單名稱（繁體中文、簡短的研究方向名稱，例如「神經科學」「奈米材料」「無機化學合成」）。新清單的範圍粗細要比照使用者現有的清單：現有清單分得細就取細的名稱，分得粗或還沒有專業清單就取較廣的領域名稱。
+- 所有中文一律使用繁體中文與臺灣慣用學術譯名，不使用簡體字或中國大陸用語。
+- 不確定時請在 note 中誠實說明，不要捏造。`;
+}
+function normalize(d, sel){
+  d = (d && typeof d==='object') ? d : {};
+  const arr = a => Array.isArray(a) ? a.map(String).filter(Boolean) : [];
+  const t = d.term && typeof d.term==='object' ? d.term : null;
+  return {
+    kind: ['word','term','phrase','sentence'].includes(d.kind) ? d.kind : 'word',
+    original: String(d.original||sel.text),
+    pronunciation: String(d.pronunciation||''),
+    pos: String(d.pos||''),
+    translation: String(d.translation||'（沒有取得翻譯）'),
+    other: arr(d.other_meanings).slice(0,3),
+    term: t ? {full:String(t.full_name||''), field:String(t.field||''), meaning:String(t.meaning||''), related:arr(t.related).slice(0,4)} : null,
+    note: String(d.note||''),
+    page: sel.page
+  };
+}
+async function lookup(sel){
+  showTab('tr');
+  if(matchMedia('(max-width:860px)').matches) $('#side').classList.remove('collapsed');
+  await ready;
+  if(!canAsk()){ renderIdle(); return; }
+  lastLookedUp = sel.text;
+  if(ctl) ctl.abort();
+  const mine = ++reqId; ctl = new AbortController();
+  renderLoading(sel.text);
+  const ctx = await getContext(sel.text, sel.page);
+  if(mine!==reqId) return;
+  try{
+    const data = await askJSON(buildPrompt(sel.text,ctx), sel.text.length>120 ? 'default' : 'quick', ctl.signal);
+    if(mine!==reqId) return;
+    const r = normalize(data, sel);
+    const long = r.kind==='sentence' || r.original.length>80;
+    const w = long ? r : (upsertWord(r, data && data.list) || r);
+    renderCard(w);
+    renderVocab();
+  }catch(e){
+    if(mine!==reqId || (e && e.code==='cancelled')) return;
+    renderError(ERR[e && e.code] || '翻譯失敗，請再試一次。', sel, e && e.code);
+  }
+}
+
+/* =====================================================================
+   Sidebar: translation card
+   ===================================================================== */
+const KIND = {word:'單字',term:'專有名詞',phrase:'詞組',sentence:'句子'};
+function renderIdle(){
+  cur.textContent='';
+  if(inClaude && !sample){ cur.append(h('div',{class:'hint'},'此環境無法使用翻譯功能（仍可閱讀 PDF 與查看生詞表）。')); return; }
+  if(!inClaude && !settings.apiKey){
+    cur.append(h('div',{class:'hint'},'要使用翻譯，請先設定 Claude API 金鑰。',h('div',{class:'actions'},h('button',{class:'btn primary sm',onclick:openSettings},'前往設定'))));
+    return;
+  }
+  cur.append(h('div',{class:'hint'},'在 PDF 中',h('b',null,'選取文字'),'（滑鼠拖曳、雙擊單字，或手機長按），再按出現的「翻譯」按鈕。也可以打開上方的「自動翻譯」。',h('br'),'查過的單字與專有名詞會自動收進「生詞表」，並依研究方向分類。'));
+}
+function renderLoading(text){
+  cur.textContent='';
+  cur.append(h('div',{class:'card'},
+    h('div',{class:'orig'+(text.length>60?' long':'')},text),
+    h('div',{class:'skel',style:'width:70%'}), h('div',{class:'skel',style:'width:92%'}), h('div',{class:'skel',style:'width:55%'})));
+}
+function renderError(msg, sel, code){
+  cur.textContent='';
+  cur.append(h('div',{class:'card'},
+    h('div',{class:'orig'+(sel.text.length>60?' long':'')},sel.text),
+    h('p',{class:'err'},msg),
+    h('div',{class:'actions'},
+      h('button',{class:'btn sm',onclick:()=>lookup(sel)},'再試一次'),
+      (code==='no_key'||code==='bad_key'||code==='bad_model') && h('button',{class:'btn sm',onclick:openSettings},'設定'))));
+}
+function copyText(t){ try{ navigator.clipboard.writeText(t).then(()=>toast('已複製'),()=>toast('無法複製')); }catch(e){ toast('無法複製'); } }
+function starButton(w){
+  const b = h('button',{class:'starbtn'+(w.starred?' on':''),title:'星號','aria-label':'星號'}, w.starred?'★':'☆');
+  b.addEventListener('click',e=>{
+    e.stopPropagation();
+    w.starred=!w.starred; saveStore();
+    renderVocab();
+    if(cur.dataset.k===w.k) renderCard(w);
+  });
+  return b;
+}
+function listPicker(w){
+  const sel = h('select',{'aria-label':'清單'});
+  const names = store.lists.map(l=>l.name);
+  if(!names.includes(w.list)) names.push(w.list);
+  names.forEach(n=>sel.append(h('option',{value:n,selected:n===w.list},n)));
+  sel.append(h('option',{value:'\u0000new'},'＋ 新增清單…'));
+  const row = h('div',{class:'listrow'},'清單',sel);
+  sel.addEventListener('change',()=>{
+    if(sel.value==='\u0000new'){
+      const inp = h('input',{type:'text',placeholder:'新清單名稱',maxlength:24});
+      const ok = h('button',{class:'btn sm'},'加入');
+      const go = ()=>{ const n=cleanName(inp.value); if(!n){ renderCard(w); return; } moveWord(w, ensureList(n,true)); };
+      ok.addEventListener('click',go); inp.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); });
+      row.textContent=''; row.append('清單',inp,ok); inp.focus();
+    }else moveWord(w, sel.value);
+  });
+  return row;
+}
+function moveWord(w, list){
+  w.list=list; w.manual=true; pruneLists(); saveStore();
+  renderVocab(); renderCard(w); toast('已移到「'+list+'」');
+}
+function renderCard(r){
+  const saved = !!(r.k && store.words[r.k]);
+  cur.dataset.k = saved ? r.k : '';
+  const long = r.kind==='sentence' || r.original.length>60;
+  const meta = h('div',{class:'meta'},
+    h('span',{class:'chip'+(r.kind==='term'?' term':' plain')},KIND[r.kind]),
+    r.pos && h('span',null,r.pos),
+    r.pronunciation && h('span',null,/^[\/\[]/.test(r.pronunciation)?r.pronunciation:'/'+r.pronunciation+'/'),
+    r.page && h('span',null,'第 '+r.page+' 頁'),
+    saved && r.n>1 && h('span',null,'查過 '+r.n+' 次'));
+  const card = h('div',{class:'card'},
+    h('div',{class:'card-top'}, h('div',{class:'orig'+(long?' long':'')},r.original), saved && starButton(r)),
+    meta,
+    h('div',{class:'trans'},r.translation),
+    r.other && r.other.length>0 && h('div',{class:'sub'},h('b',null,'其他詞義　'),r.other.join('；')),
+    r.term && h('div',{class:'termbox'},
+      h('h3',null,'專有名詞說明', r.term.field && h('span',{class:'chip term'},r.term.field)),
+      r.term.full && h('div',{class:'full'},r.term.full),
+      r.term.meaning && h('p',null,r.term.meaning),
+      r.term.related.length>0 && h('div',{class:'chips'},r.term.related.map(x=>h('span',{class:'chip plain'},x)))),
+    r.note && h('div',{class:'sub'},h('b',null,'補充　'),r.note),
+    saved && listPicker(r),
+    h('div',{class:'actions'},
+      h('button',{class:'btn sm',onclick:()=>copyText(r.original+'\n'+r.translation+(r.term&&r.term.meaning?'\n'+r.term.meaning:''))},'複製'),
+      saved && h('button',{class:'btn sm danger',onclick:()=>{ delete store.words[r.k]; pruneLists(); saveStore(); renderVocab(); renderIdle(); toast('已從生詞表移除'); }},'從生詞表移除')));
+  cur.textContent=''; cur.append(card);
+}
+
+/* =====================================================================
+   Sidebar: vocabulary lists
+   ===================================================================== */
+let vf = 'all', reorgBusy=false, renaming=false;
+function showTab(t){
+  $('#tab-tr').classList.toggle('on',t==='tr'); $('#tab-vo').classList.toggle('on',t==='vo');
+  $('#pane-tr').hidden = t!=='tr'; $('#pane-vo').hidden = t!=='vo';
+}
+document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{ showTab(b.dataset.tab); if(matchMedia('(max-width:860px)').matches) $('#side').classList.remove('collapsed'); }));
+function wordsFor(f){
+  const ws = allWords();
+  if(f==='all') return ws;
+  if(f==='star') return ws.filter(w=>w.starred);
+  return ws.filter(w=>w.list===f);
+}
+function toTSV(ws){ return ws.map(w=>[w.original,w.translation,w.list,w.starred?'★':'',(w.term&&w.term.meaning)||''].map(x=>String(x).replace(/[\t\r\n]+/g,' ')).join('\t')).join('\n'); }
+function renderVocab(){
+  const ws = allWords(), counts = listCounts();
+  $('#vcount').textContent = ws.length ? '('+ws.length+')' : '';
+  if(vf!=='all' && vf!=='star' && !counts.has(vf)) vf='all';
+  const F = $('#filters'); F.textContent='';
+  const chip = (id,label,n)=>h('button',{class:'fchip'+(vf===id?' on':''),onclick:()=>{ vf=id; renaming=false; renderVocab(); }},label,h('small',null,n));
+  F.append(chip('all','全部',ws.length), chip('star','★ 星號',ws.filter(w=>w.starred).length));
+  for(const [n,c] of counts) F.append(chip(n,n,c));
+
+  const S = $('#suggest'); S.textContent='';
+  const big = [...counts].find(([n,c])=>n!==GENERAL && c>40);
+  const small = [...counts].filter(([n,c])=>c>0 && c<3 && n!==GENERAL).length;
+  if(canAsk() && !reorgBusy && (big || small>=4)){
+    S.append(h('div',{class:'suggest'},
+      big ? '「'+big[0]+'」已有 '+big[1]+' 個詞，可以細分成更精確的清單。' : '有 '+small+' 份清單只有一兩個詞，可以合併整理。',
+      h('button',{class:'btn sm primary',onclick:reorganize},'整理')));
+  }
+
+  const T = $('#vtools'); T.textContent='';
+  const shown = wordsFor(vf);
+  const isList = vf!=='all' && vf!=='star';
+  if(renaming && isList){
+    const inp = h('input',{type:'text',value:vf,maxlength:24,style:'border:1px solid var(--line);border-radius:8px;padding:4px 8px;flex:1;min-width:0'});
+    const go = ()=>{
+      const n = cleanName(inp.value); renaming=false;
+      if(n && n!==vf){
+        const old=vf; ensureList(n,true);
+        for(const w of Object.values(store.words)) if(w.list===old) w.list=n;
+        store.lists = store.lists.filter(l=>l.name!==old);
+        vf=n; saveStore();
+      }
+      renderVocab();
+    };
+    inp.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); });
+    T.append(inp, h('button',{class:'btn sm primary',onclick:go},'確定'), h('button',{class:'btn sm',onclick:()=>{ renaming=false; renderVocab(); }},'取消'));
+  }else{
+    if(ws.length>=4) T.append(h('button',{class:'btn sm',disabled:reorgBusy||!canAsk(),onclick:reorganize,title:'依照目前的字數與你的分類習慣，重新決定清單的粗細'}, reorgBusy?'整理中…':'重新整理分類'));
+    if(isList) T.append(h('button',{class:'btn sm',onclick:()=>{ renaming=true; renderVocab(); }},'重新命名'));
+    if(isList && shown.length===0 && vf!==GENERAL) T.append(h('button',{class:'btn sm danger',onclick:()=>{ store.lists=store.lists.filter(l=>l.name!==vf); vf='all'; saveStore(); renderVocab(); }},'刪除清單'));
+    if(shown.length) T.append(h('button',{class:'btn sm',onclick:()=>copyText(toTSV(shown.slice().reverse()))},'複製這份清單'));
+  }
+
+  const L = $('#vlist'); L.textContent='';
+  if(!shown.length){
+    L.append(h('div',{class:'hint'}, ws.length ? '這裡還沒有詞。' : '還沒有生詞。在 PDF 中選字翻譯後，單字與專有名詞會自動收進這裡，並依研究方向分成一份份清單；點 ☆ 可以加星號。'));
+    return;
+  }
+  for(const w of shown){
+    L.append(h('li',{onclick:()=>{ renderCard(w); showTab('tr'); }},
+      starButton(w),
+      h('div',{style:'min-width:0'}, h('div',{class:'o'},w.original), h('div',{class:'t'},w.translation)),
+      !isList && h('span',{class:'l'},w.list)));
+  }
+}
+
+/* Re-sort every word into lists whose granularity fits how many words there are
+   and how the user has been organising them (renamed lists, manual moves). */
+async function reorganize(){
+  await ready;
+  if(reorgBusy || !canAsk()) return;
+  const ws = allWords().slice(0,600);
+  if(ws.length<4){ toast('生詞還太少，不需要整理'); return; }
+  reorgBusy=true; renderVocab();
+  const locked = store.lists.filter(l=>l.locked).map(l=>l.name);
+  const lines = ws.map((w,i)=>[i,w.original,w.translation,(w.term&&w.term.field)||'',w.list,w.manual?'固定':''].join('\t')).join('\n');
+  const prompt = `你要幫一位台灣研究生整理英文文獻生詞表，把每個詞分到依「研究方向」命名的清單中。
+
+目前的生詞（每行：編號、原文、翻譯、領域、目前清單、是否固定）：
+${lines}
+
+使用者自己建立或改過名字的清單（名稱必須原樣保留，可以繼續把詞放進去）：
+${locked.map(n=>'- '+n).join('\n')||'（無）'}
+
+分類規則：
+1. 非特定領域的一般學術用字、連接詞、寫作句型，一律放「${GENERAL}」。
+2. 專業詞彙依研究方向分類，清單名稱用繁體中文、簡短的研究方向名稱（如「神經科學」「奈米材料」「無機化學合成」）。
+3. 範圍的精細程度由使用者的用量決定：理想上每份清單約 8–40 個詞。某個方向的詞超過 40 個且看得出子領域時，拆成更細的清單（例如把「神經科學」拆成「膠質瘤生物學」「突觸生理」）；只有 1–3 個詞的方向，併入最接近的較廣清單，不要為零星幾個詞開新清單。總詞數少時分得粗，詞數多的方向才分得細。
+4. 參考使用者的習慣：標示「固定」的詞是使用者親手指定的，不可移動；它們所在的清單以及使用者自訂的清單，顯示了使用者偏好的命名方式與粗細，其他清單請比照。
+5. 現有清單名稱若合適就沿用，不要無故改名。
+
+只回傳一個 JSON 物件，不要有其他文字：{"assign": {"編號": "清單名稱", ...}}，每個不是「固定」的詞都要有一筆。`;
+  try{
+    const d = await askJSON(prompt,'default');
+    const a = d && d.assign && typeof d.assign==='object' ? d.assign : null;
+    if(!a) throw {code:'invalid_json'};
+    let moved=0;
+    ws.forEach((w,i)=>{
+      const n = cleanName(a[i]); if(!n || w.manual) return;
+      if(n!==w.list){ w.list=ensureList(n); moved++; } else ensureList(n);
+    });
+    pruneLists(); saveStore();
+    toast(moved ? '已重新分類 '+moved+' 個詞' : '目前的分類已經合適');
+  }catch(e){ toast(ERR[e && e.code] || '整理失敗，請再試一次'); }
+  reorgBusy=false; renderVocab();
+  const k = cur.dataset.k; if(k && store.words[k]) renderCard(store.words[k]);
+}
+
+/* =====================================================================
+   Settings (standalone app only)
+   ===================================================================== */
+function openSettings(){
+  $('#s-key').value=settings.apiKey; $('#s-mq').value=settings.modelQuick; $('#s-md').value=settings.modelDefault;
+  $('#modal').classList.add('show');
+}
+function closeSettings(){ $('#modal').classList.remove('show'); }
+$('#setbtn').onclick=openSettings;
+$('#s-cancel').onclick=closeSettings;
+$('#modal').addEventListener('click',e=>{ if(e.target.id==='modal') closeSettings(); });
+$('#s-save').onclick=()=>{
+  settings.apiKey=$('#s-key').value.trim();
+  settings.modelQuick=$('#s-mq').value.trim()||'claude-haiku-5-5';
+  settings.modelDefault=$('#s-md').value.trim()||'claude-sonnet-5-5';
+  lsSet('rie.settings.v1',settings); closeSettings(); toast('已儲存');
+  if(!cur.dataset.k) renderIdle();
+  renderVocab();
+};
+function download(name, text, type){
+  const a = h('a',{href:URL.createObjectURL(new Blob([text],{type})),download:name});
+  document.body.append(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+$('#s-export').onclick=()=>download('read-it-easier-vocab-'+new Date().toISOString().slice(0,10)+'.json', JSON.stringify(store), 'application/json');
+$('#s-tsv').onclick=()=>download('read-it-easier-vocab.tsv', '﻿原文\t翻譯\t清單\t星號\t說明\n'+toTSV(allWords().reverse()), 'text/tab-separated-values');
+$('#s-import').addEventListener('change',async e=>{
+  const f=e.target.files[0]; e.target.value=''; if(!f) return;
+  try{
+    const d = JSON.parse(await f.text());
+    if(!d || typeof d.words!=='object') throw 0;
+    let n=0;
+    for(const l of (d.lists||[])) if(l && l.name) ensureList(l.name, l.locked);
+    for(const [k,w] of Object.entries(d.words)){
+      if(!w || !w.original) continue;
+      const old = store.words[k];
+      if(!old || (w.t||0)>(old.t||0)){ w.list=ensureList(w.list); store.words[k]=Object.assign({},w,{k,starred:!!(w.starred||(old&&old.starred))}); n++; }
+      else if(w.starred) old.starred=true;
+    }
+    saveStore(); renderVocab(); toast('已匯入 '+n+' 個詞');
+  }catch(err){ toast('這不是有效的備份檔'); }
+});
+
+/* =====================================================================
+   Boot
+   ===================================================================== */
+updZoomLabel(); renderVocab();
+if(!inClaude && 'serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+})();
+</script>
+</body>
+</html>
