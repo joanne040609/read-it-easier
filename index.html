@@ -30,7 +30,7 @@ button,select,input{font:inherit;color:inherit}
 button{cursor:pointer}
 ::selection{background:rgba(226,179,111,.35)}
 *{scrollbar-width:thin;scrollbar-color:#45423e transparent}
-.app{display:grid;grid-template-rows:auto 1fr;height:100dvh}
+.app{display:grid;grid-template-rows:auto 1fr;grid-template-columns:minmax(0,1fr);height:100dvh;width:100%;overflow:hidden}
 
 /* ---------- top bar ---------- */
 .bar{display:flex;align-items:center;gap:12px;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line-soft);min-height:54px}
@@ -58,7 +58,13 @@ button{cursor:pointer}
 .group .tot{padding:0 10px 0 4px;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
 
 /* ---------- layout ---------- */
-.layout{display:grid;grid-template-columns:1fr 400px;min-height:0}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 8px var(--sidew,400px);min-height:0;min-width:0}
+.split{cursor:col-resize;background:var(--panel);border-left:1px solid var(--line-soft);position:relative;touch-action:none}
+.split::after{content:'';position:absolute;left:2px;top:50%;width:3px;height:44px;margin-top:-22px;border-radius:2px;background:#4a4742}
+.split:hover::after,.split.drag::after{background:var(--lamp)}
+.side{border-left:0!important;min-width:0}
+body.dragging{cursor:col-resize;user-select:none}
+body.dragging .viewer{pointer-events:none}
 .viewer{overflow:auto;position:relative;padding:22px 0 90px;
   background:radial-gradient(1100px 620px at 8% -8%, rgba(226,179,111,.10), transparent 62%), linear-gradient(180deg,#232221,#1a1918 55%)}
 .viewer.drag{outline:2px dashed var(--lamp);outline-offset:-12px}
@@ -183,7 +189,8 @@ select option{background:var(--card);color:var(--ink)}
 
 #sidetoggle{display:none}
 @media (max-width:860px){
-  .layout{grid-template-columns:1fr}
+  .layout{grid-template-columns:minmax(0,1fr)}
+  .split{display:none}
   .bar{gap:8px;padding:8px 10px;flex-wrap:wrap}
   .brand span,.fname,#zfit,.wide{display:none}
   .tools{gap:6px}
@@ -230,6 +237,7 @@ select option{background:var(--card);color:var(--ink)}
         <label class="btn primary lg" for="file">開啟 PDF</label>
       </div>
     </main>
+    <div class="split" id="split" role="separator" aria-orientation="vertical" title="拖動調整寬度，按兩下還原"></div>
 
     <aside class="side" id="side">
       <div class="tabs">
@@ -295,7 +303,7 @@ select option{background:var(--card);color:var(--ink)}
 <script>
 (function(){
 "use strict";
-const APP_VERSION = '1.4.0';
+const APP_VERSION = '1.4.1';
 const $ = s => document.querySelector(s);
 const cur = $('#current');
 function h(tag, attrs, ...kids){
@@ -554,14 +562,16 @@ async function openDoc(fileName, ab){
     return false;
   }
 }
+let fitMode=true;
 function fitWidth(rebuild=true){
   if(!baseSize) return;
+  fitMode=true;
   const avail = viewer.clientWidth - (window.innerWidth<=860 ? 16 : 56);
   scale = Math.max(.5, Math.min(3, avail/baseSize.w));
   updZoomLabel();
   if(rebuild) buildPages();
 }
-function setScale(s){ scale = Math.max(.5, Math.min(3.5, s)); updZoomLabel(); buildPages(true); }
+function setScale(s){ fitMode=false; scale = Math.max(.5, Math.min(3.5, s)); updZoomLabel(); buildPages(true); }
 
 function buildPages(keepPos){
   const myGen = ++gen;
@@ -726,6 +736,24 @@ $('#zout').onclick=()=>setScale(scale/1.15);
 $('#zfit').onclick=()=>fitWidth(true);
 $('#sidetoggle').onclick=()=>$('#side').classList.toggle('collapsed');
 $('#libbtn').onclick=showHome;
+/* keep "fit width" fitted when the window or the side panel changes size */
+let rsT; function refit(){ clearTimeout(rsT); rsT=setTimeout(()=>{ if(pdfDoc && fitMode) fitWidth(true); },200); }
+window.addEventListener('resize',refit);
+/* drag the divider to give the PDF or the side panel more room */
+(function(){
+  const split=$('#split'), layout=document.querySelector('.layout');
+  const clamp=w=>Math.max(260, Math.min(w, Math.min(760, window.innerWidth-300)));
+  const set=w=>layout.style.setProperty('--sidew', clamp(w)+'px');
+  if(settings.sideW) set(settings.sideW);
+  let on=false;
+  split.addEventListener('pointerdown',e=>{ on=true; split.setPointerCapture(e.pointerId); split.classList.add('drag'); document.body.classList.add('dragging'); e.preventDefault(); });
+  split.addEventListener('pointermove',e=>{ if(on) set(window.innerWidth-e.clientX-4); });
+  const end=()=>{ if(!on) return; on=false; split.classList.remove('drag'); document.body.classList.remove('dragging');
+    settings.sideW=parseInt(getComputedStyle(layout).getPropertyValue('--sidew'))||400; lsSet('rie.settings.v1',settings); refit(); };
+  split.addEventListener('pointerup',end); split.addEventListener('pointercancel',end);
+  split.addEventListener('dblclick',()=>{ layout.style.removeProperty('--sidew'); delete settings.sideW; lsSet('rie.settings.v1',settings); refit(); });
+  window.addEventListener('resize',()=>{ if(settings.sideW) set(settings.sideW); });
+})();
 $('#expbtn').onclick=()=>exportPdf();
 ['dragenter','dragover'].forEach(t=>document.addEventListener(t,e=>{ e.preventDefault(); viewer.classList.add('drag'); }));
 document.addEventListener('dragleave',e=>{ e.preventDefault(); if(!e.relatedTarget) viewer.classList.remove('drag'); });
