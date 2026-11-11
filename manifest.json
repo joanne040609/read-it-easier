@@ -1,16 +1,31 @@
 {
   "name": "Read It Easier",
   "short_name": "Read It Easier",
-  "description": "幫助繁體中文使用者閱讀英文文獻：選字翻譯、專有名詞說明、分類生詞表。",
+  "description": "幫助繁體中文使用者閱讀英文文獻：選字翻譯、專有名詞說明、分類生詞表與重點句。",
   "lang": "zh-Hant",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f3f1ec",
-  "theme_color": "#1f6f6b",
+  "background_color": "#1a1918",
+  "theme_color": "#1a1918",
   "icons": [
-    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }

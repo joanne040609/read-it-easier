@@ -4,189 +4,219 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Read It Easier</title>
-<meta name="description" content="幫助繁體中文使用者閱讀英文文獻：選字翻譯、專有名詞說明、分類生詞表。">
-<meta name="theme-color" content="#1f6f6b">
+<meta name="description" content="幫助繁體中文使用者閱讀英文文獻：選字翻譯、專有名詞說明、分類生詞表與重點句。">
+<meta name="theme-color" content="#1a1918">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
 <style>
+/* Palette: a dim concrete room — charcoal walls, black leather, steel shelving, one warm lamp. */
 :root{
-  --bg:#f3f1ec; --panel:#fbfaf7; --ink:#26241f; --muted:#7a766c; --line:#e2dfd6;
-  --accent:#1f6f6b; --accent-soft:#e3f0ee; --term:#fdf3dc; --term-line:#ecd9a6; --danger:#b3412f; --star:#e0a100;
-  --shadow:0 8px 24px rgba(40,36,25,.14);
+  --bg:#1a1918; --wall:#262524; --panel:#201f1e; --card:#2b2a28; --raise:#34322f;
+  --line:#3c3a36; --line-soft:#302e2b; --steel:#8d8a84;
+  --ink:#ece7de; --muted:#9b958b; --faint:#6f6a62;
+  --lamp:#e2b36f; --lamp-soft:rgba(226,179,111,.12); --lamp-line:rgba(226,179,111,.34); --lamp-ink:#1a1918;
+  --danger:#e08571; --paper:#f4f1ea;
+  --shadow:0 14px 40px rgba(0,0,0,.5);
+  --serif:"Cormorant Garamond","Songti TC","Noto Serif TC",Georgia,serif;
+  --sans:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,-apple-system,"Segoe UI",sans-serif;
 }
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
-body{font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg);overflow:hidden}
+body{font-family:var(--sans);color:var(--ink);background:var(--bg);overflow:hidden;-webkit-font-smoothing:antialiased}
 button,select,input{font:inherit;color:inherit}
 button{cursor:pointer}
+::selection{background:rgba(226,179,111,.35)}
+*{scrollbar-width:thin;scrollbar-color:#45423e transparent}
 .app{display:grid;grid-template-rows:auto 1fr;height:100dvh}
 
-/* top bar */
-.bar{display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
-.brand{font-weight:700;letter-spacing:.01em;margin-right:6px;display:flex;align-items:center;gap:8px;white-space:nowrap}
-.brand i{width:22px;height:22px;border-radius:6px;background:var(--accent);display:inline-block;position:relative}
-.brand i::after{content:"譯";position:absolute;inset:0;color:#fff;font-size:13px;line-height:22px;text-align:center;font-style:normal}
-.btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 12px;line-height:1.2;white-space:nowrap}
-.btn:hover{border-color:#cfcabd}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.btn.primary:hover{filter:brightness(1.08)}
-.btn.sm{padding:4px 9px;font-size:13px}
+/* ---------- top bar ---------- */
+.bar{display:flex;align-items:center;gap:12px;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line-soft);min-height:54px}
+.brand{display:flex;align-items:center;gap:10px;white-space:nowrap;margin-right:4px}
+.brand img{width:30px;height:30px;border-radius:8px;display:block;background:#fff}
+.brand span{font-family:var(--serif);font-size:23px;font-weight:600;letter-spacing:.01em;line-height:1}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:9px;padding:7px 13px;line-height:1.2;white-space:nowrap;transition:background .12s,border-color .12s}
+.btn:hover{background:var(--raise);border-color:#514e49}
+.btn.primary{background:var(--lamp);border-color:var(--lamp);color:var(--lamp-ink);font-weight:600}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.sm{padding:5px 10px;font-size:13px}
+.btn.lg{padding:11px 26px;font-size:16px;border-radius:11px}
 .btn.danger{color:var(--danger)}
-.btn:disabled{opacity:.45;cursor:default}
-.tools{display:flex;align-items:center;gap:6px;margin-left:auto}
-.tools input[type=number]{width:54px;padding:5px 6px;border:1px solid var(--line);border-radius:8px;background:#fff;text-align:center}
-.tools .sep{color:var(--muted);font-size:13px}
-.zoomlbl{min-width:46px;text-align:center;font-size:13px;color:var(--muted)}
-.fname{max-width:22vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:13px}
+.btn:disabled{opacity:.4;cursor:default}
+.fname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:13px}
+.tools{display:flex;align-items:center;gap:8px;margin-left:auto}
+.group{display:flex;align-items:center;border:1px solid var(--line);border-radius:9px;background:var(--card);overflow:hidden}
+.group button{border:0;background:none;padding:6px 10px;font-size:14px;line-height:1.2}
+.group button:hover:not(:disabled){background:var(--raise)}
+.group button:disabled{opacity:.35;cursor:default}
+.group .zoomlbl{min-width:46px;text-align:center;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.group input[type=number]{width:44px;padding:6px 2px 6px 8px;border:0;background:none;text-align:right;font-variant-numeric:tabular-nums;-moz-appearance:textfield;appearance:textfield}
+.group input[type=number]::-webkit-outer-spin-button,.group input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.group input:focus{outline:none}
+.group .tot{padding:0 10px 0 4px;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
 
-/* layout */
-.layout{display:grid;grid-template-columns:1fr 390px;min-height:0}
-.viewer{overflow:auto;position:relative;padding:18px 0 80px}
-.viewer.drag{outline:3px dashed var(--accent);outline-offset:-10px}
-.page{position:relative;margin:0 auto 14px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.18),0 6px 20px rgba(0,0,0,.06)}
+/* ---------- layout ---------- */
+.layout{display:grid;grid-template-columns:1fr 400px;min-height:0}
+.viewer{overflow:auto;position:relative;padding:22px 0 90px;
+  background:radial-gradient(1100px 620px at 8% -8%, rgba(226,179,111,.10), transparent 62%), linear-gradient(180deg,#232221,#1a1918 55%)}
+.viewer.drag{outline:2px dashed var(--lamp);outline-offset:-12px}
+.page{position:relative;margin:0 auto 18px;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.5),0 18px 44px rgba(0,0,0,.38)}
 .page canvas{display:block;position:absolute;inset:0}
 .page .ph{position:absolute;right:10px;bottom:6px;font-size:11px;color:#b9b5aa}
+.page .hl{position:absolute;background:rgba(240,186,84,.42);mix-blend-mode:multiply;pointer-events:none;border-radius:2px}
 .textLayer{position:absolute;inset:0;overflow:hidden;line-height:1;text-size-adjust:none;forced-color-adjust:none;transform-origin:0 0}
 .textLayer span,.textLayer br{color:transparent;position:absolute;white-space:pre;cursor:text;transform-origin:0% 0%}
-.textLayer ::selection{background:rgba(31,111,107,.35)}
+.textLayer ::selection{background:rgba(214,150,40,.38)}
 .textLayer .endOfContent{display:block;position:absolute;inset:100% 0 0;z-index:-1;cursor:default;user-select:none}
 
-.empty{max-width:520px;margin:12vh auto 0;text-align:center;padding:0 20px}
-.empty h1{font-size:22px;margin:0 0 8px}
-.empty p{color:var(--muted);line-height:1.7;margin:6px 0}
-.drop{margin:22px 0 8px;border:2px dashed #cfcabd;border-radius:16px;padding:34px 16px;background:rgba(255,255,255,.55)}
-.drop b{display:block;margin-bottom:12px}
-.banner{margin:0 auto 12px;max-width:720px;background:var(--term);border:1px solid var(--term-line);border-radius:10px;padding:10px 14px;font-size:14px;line-height:1.6}
+.empty{height:100%;min-height:420px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;padding:20px;text-align:center}
+.empty .hero{width:168px;height:168px;border-radius:6px;background:#fff;display:block;border:9px solid #111;outline:1px solid #3a3835;box-shadow:0 22px 50px rgba(0,0,0,.55)}
+.empty h1{font-family:var(--serif);font-weight:500;font-size:46px;letter-spacing:.01em;margin:0;line-height:1}
+.banner{margin:0 auto 14px;max-width:720px;background:var(--lamp-soft);border:1px solid var(--lamp-line);border-radius:10px;padding:10px 14px;font-size:14px;line-height:1.6}
 
-/* sidebar */
-.side{background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
-.tabs{display:flex;border-bottom:1px solid var(--line);padding:0 8px;gap:2px;align-items:stretch}
-.tab{border:0;background:none;padding:12px 12px 10px;font-size:15px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
-.tab.on{color:var(--ink);font-weight:700;border-bottom-color:var(--accent)}
-.tabs .switch{margin-left:auto}
-.switch{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);user-select:none;cursor:pointer;padding-right:8px}
-.switch input{accent-color:var(--accent)}
-.side-body{overflow:auto;padding:14px 16px 24px;flex:1}
-.hint{color:var(--muted);line-height:1.75;font-size:14px;padding:6px 2px}
+/* ---------- sidebar ---------- */
+.side{background:var(--panel);border-left:1px solid var(--line-soft);display:flex;flex-direction:column;min-height:0}
+.tabs{display:flex;border-bottom:1px solid var(--line-soft);padding:0 10px;gap:2px;align-items:stretch;min-height:46px}
+.tab{border:0;background:none;padding:13px 11px 11px;font-size:14.5px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tab small{font-size:11.5px;color:var(--faint);margin-left:3px;font-variant-numeric:tabular-nums}
+.tab.on{color:var(--ink);font-weight:600;border-bottom-color:var(--lamp)}
+.switch{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);user-select:none;cursor:pointer;padding-right:4px;white-space:nowrap}
+.switch input{accent-color:var(--lamp)}
+.side-body{overflow:auto;padding:16px 16px 28px;flex:1}
+.idle{color:var(--faint);font-family:var(--serif);font-style:italic;font-size:22px;text-align:center;padding:64px 10px 20px}
+.hint{color:var(--muted);line-height:1.7;font-size:14px;padding:6px 2px}
 
-.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 15px;animation:in .18s ease-out}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;animation:in .18s ease-out}
 @keyframes in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 .card-top{display:flex;gap:8px;align-items:flex-start}
-.card .orig{font-size:19px;font-weight:700;line-height:1.35;word-break:break-word;flex:1}
-.card .orig.long{font-size:14px;font-weight:500;color:var(--muted);font-style:italic}
-.starbtn{border:0;background:none;font-size:22px;line-height:1;padding:2px 4px;color:#c9c5b8}
-.starbtn.on{color:var(--star)}
-.meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0 2px;font-size:13px;color:var(--muted)}
-.chip{display:inline-block;padding:1px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:12px;line-height:1.7}
-.chip.term{background:var(--term);color:#8a5a00;border:1px solid var(--term-line)}
-.chip.plain{background:#f0eee8;color:#5d594f}
-.trans{font-size:18px;line-height:1.6;margin:10px 0 4px}
+.card .orig{font-size:20px;font-weight:700;line-height:1.35;word-break:break-word;flex:1}
+.card .orig.long{font-family:var(--serif);font-size:18px;font-weight:500;font-style:italic;color:#cfc9be;line-height:1.5}
+.starbtn{border:0;background:none;font-size:22px;line-height:1;padding:2px 4px;color:#5c5852}
+.starbtn.on{color:var(--lamp)}
+.meta{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;margin:8px 0 2px;font-size:12.5px;color:var(--muted)}
+.chip{display:inline-block;padding:1px 9px;border-radius:999px;font-size:12px;line-height:1.7;background:var(--raise);color:#c9c3b8}
+.chip.term,.chip.hlchip{background:var(--lamp-soft);color:var(--lamp);border:1px solid var(--lamp-line)}
+.chip.plain{background:var(--raise);color:#c9c3b8}
+.trans{font-size:18px;line-height:1.65;margin:12px 0 4px}
 .sub{font-size:13px;color:var(--muted);line-height:1.7;margin-top:8px}
 .sub b{color:var(--ink);font-weight:600}
-.termbox{margin-top:12px;background:var(--term);border:1px solid var(--term-line);border-radius:12px;padding:10px 12px}
-.termbox h3{margin:0 0 4px;font-size:13px;color:#8a5a00;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.termbox{margin-top:14px;background:var(--lamp-soft);border:1px solid var(--lamp-line);border-radius:12px;padding:11px 13px}
+.termbox h3{margin:0 0 4px;font-size:12.5px;color:var(--lamp);font-weight:600;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .termbox .full{font-size:14px;font-weight:600;margin:2px 0}
 .termbox p{margin:4px 0;font-size:14px;line-height:1.75}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
-.refbox{margin-top:12px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.7}
-.refbox h3{margin:0 0 4px;font-size:13px;color:var(--muted)}
-.refbox a{color:var(--accent);text-decoration:none;word-break:break-word}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.refbox,.srcbox{margin-top:12px;border:1px solid var(--line);border-radius:12px;padding:11px 13px;font-size:13px;line-height:1.7}
+.refbox h3,.srcbox h3{margin:0 0 4px;font-size:12.5px;color:var(--muted);font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.refbox a{color:var(--lamp);text-decoration:none;word-break:break-word}
 .refbox a:hover{text-decoration:underline}
 .refbox ul{margin:4px 0 0;padding-left:18px}
 .refbox li{margin:3px 0}
 .refbox .src{color:var(--muted);font-size:12px}
 .refbox .row{margin:4px 0}
+.srcbox .cite{color:#d6d0c5;word-break:break-word}
+.srcbox .short{color:var(--lamp);font-variant-numeric:tabular-nums}
+.srcbox textarea{width:100%;min-height:74px;font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 9px;resize:vertical}
+.linkbtn{border:0;background:none;color:var(--lamp);font-size:12.5px;padding:0}
 .listrow{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:var(--muted);flex-wrap:wrap}
-.listrow select,.listrow input,.field input,.field select{border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:#fff;min-width:0}
-.listrow select{max-width:200px}
-.actions{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
-.skel{height:14px;border-radius:7px;background:linear-gradient(90deg,#eeece5,#f7f6f1,#eeece5);background-size:200% 100%;animation:sh 1.2s infinite;margin:10px 0}
+.listrow select,.listrow input,.field input,.field select,.inp{border:1px solid var(--line);border-radius:8px;padding:6px 9px;background:var(--bg);min-width:0}
+.listrow select{max-width:210px}
+select option{background:var(--card);color:var(--ink)}
+.actions{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap}
+.skel{height:14px;border-radius:7px;background:linear-gradient(90deg,#33312e,#403d39,#33312e);background-size:200% 100%;animation:sh 1.2s infinite;margin:11px 0}
 @keyframes sh{to{background-position:-200% 0}}
 .err{color:var(--danger);font-size:14px;line-height:1.7}
 
-/* vocab */
-.filters{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
-.fchip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 10px;font-size:13px;line-height:1.5}
-.fchip.on{background:var(--accent);border-color:var(--accent);color:#fff}
-.fchip small{opacity:.7;margin-left:3px}
+/* ---------- lists ---------- */
+.filters{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.fchip{border:1px solid var(--line);background:none;border-radius:999px;padding:3px 11px;font-size:13px;line-height:1.5;color:#cfc9be}
+.fchip:hover{border-color:#57534d}
+.fchip.on{background:var(--lamp);border-color:var(--lamp);color:var(--lamp-ink);font-weight:600}
+.fchip small{opacity:.65;margin-left:4px;font-variant-numeric:tabular-nums}
 .vtools{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
+.vtools:empty,.filters:empty{display:none}
 .vlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
-.vlist li{border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 8px 8px 4px;display:grid;grid-template-columns:auto 1fr auto;gap:0 4px;align-items:center;font-size:14px;cursor:pointer}
-.vlist li:hover{border-color:#c9c4b6}
+.vlist li{border:1px solid var(--line-soft);background:var(--card);border-radius:11px;padding:9px 10px 9px 4px;display:grid;grid-template-columns:auto 1fr auto;gap:0 4px;align-items:center;font-size:14px;cursor:pointer}
+.vlist li:hover{border-color:#57534d}
+.vlist li.sent{align-items:start}
 .vlist .starbtn{font-size:18px}
 .vlist .o{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vlist .sent .o{font-family:var(--serif);font-style:italic;font-weight:500;font-size:16px;white-space:normal;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;line-height:1.4}
 .vlist .t{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
-.vlist .l{font-size:11px;color:#a29e92;text-align:right;max-width:92px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.suggest{background:var(--accent-soft);border-radius:10px;padding:9px 12px;font-size:13px;line-height:1.6;margin-bottom:12px;display:flex;gap:8px;align-items:center;justify-content:space-between}
+.vlist .sent .t{color:var(--lamp);font-size:12px;margin-top:4px}
+.vlist .l{font-size:11px;color:var(--faint);text-align:right;max-width:92px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.suggest{background:var(--lamp-soft);border:1px solid var(--lamp-line);border-radius:10px;padding:8px 10px 8px 12px;font-size:13px;line-height:1.5;margin-bottom:12px;display:flex;gap:8px;align-items:center;justify-content:space-between}
 
-/* floating translate button */
-#fab{position:fixed;z-index:20;display:none;box-shadow:var(--shadow);border-radius:999px;padding:7px 16px;background:var(--accent);color:#fff;border:0;font-size:14px}
+/* ---------- floating ---------- */
+#fab{position:fixed;z-index:20;display:none;box-shadow:var(--shadow);border-radius:999px;padding:8px 18px;background:var(--lamp);color:var(--lamp-ink);border:0;font-size:14px;font-weight:600}
 #fab.show{display:block}
-.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#2b2923;color:#fff;padding:8px 14px;border-radius:999px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:40}
-.toast.show{opacity:.95}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#0e0d0d;border:1px solid var(--line);color:var(--ink);padding:9px 16px;border-radius:999px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:40;white-space:nowrap}
+.toast.show{opacity:1}
 
-/* modal */
-.modal{position:fixed;inset:0;background:rgba(30,28,22,.45);z-index:35;display:none;align-items:center;justify-content:center;padding:16px}
+.modal{position:fixed;inset:0;background:rgba(8,8,8,.62);z-index:35;display:none;align-items:center;justify-content:center;padding:16px}
 .modal.show{display:flex}
-.sheet{background:var(--panel);border-radius:16px;max-width:460px;width:100%;padding:20px;box-shadow:var(--shadow);max-height:90dvh;overflow:auto}
-.sheet h2{margin:0 0 12px;font-size:17px}
-.sheet h3{margin:18px 0 6px;font-size:14px}
-.sheet p{font-size:13px;color:var(--muted);line-height:1.7;margin:4px 0 10px}
-.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;font-size:13px;color:var(--muted)}
+.sheet{background:var(--panel);border:1px solid var(--line);border-radius:16px;max-width:440px;width:100%;padding:22px;box-shadow:var(--shadow);max-height:90dvh;overflow:auto}
+.sheet h2{margin:0 0 16px;font-family:var(--serif);font-weight:600;font-size:26px}
+.sheet h3{margin:20px 0 8px;font-size:13px;color:var(--lamp);font-weight:600;letter-spacing:.04em}
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:10px;font-size:13px;color:var(--muted)}
 .field input,.field select{width:100%}
-.check{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--muted);margin-bottom:10px;line-height:1.6}
-.check input{margin-top:4px;accent-color:var(--accent)}
+.check{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted);margin-bottom:10px}
+.check input{accent-color:var(--lamp)}
 
 #sidetoggle{display:none}
 @media (max-width:860px){
   .layout{grid-template-columns:1fr}
-  .side{position:fixed;left:0;right:0;bottom:0;height:52dvh;border-left:0;border-top:1px solid var(--line);box-shadow:0 -10px 30px rgba(40,36,25,.14);z-index:15;border-radius:16px 16px 0 0;transition:transform .22s}
-  .side.collapsed{transform:translateY(calc(100% - 46px))}
-  .viewer{padding-bottom:54dvh}
+  .bar{gap:8px;padding:8px 10px;flex-wrap:wrap}
+  .brand span,.fname,#zfit{display:none}
+  .tools{gap:6px}
+  .group button{padding:6px 9px}
+  .side{position:fixed;left:0;right:0;bottom:0;height:54dvh;border-left:0;border-top:1px solid var(--line);box-shadow:0 -16px 40px rgba(0,0,0,.5);z-index:15;border-radius:18px 18px 0 0;transition:transform .22s}
+  .side.collapsed{transform:translateY(calc(100% - 47px))}
+  .viewer{padding:12px 0 56dvh}
   #sidetoggle{display:inline-block}
-  .tools{margin-left:0;gap:4px}
-  .zoomlbl{min-width:38px}
-  .tools input[type=number]{width:44px}
-  .fname{display:none}
-  .brand span{display:none}
+  .empty h1{font-size:36px}
+  .empty .hero{width:132px;height:132px}
 }
 </style>
 </head>
 <body>
 <div class="app">
   <header class="bar">
-    <div class="brand"><i></i><span>Read It Easier</span></div>
+    <div class="brand"><img src="icons/icon-192.png" alt=""><span>Read It Easier</span></div>
     <label class="btn primary" for="file">開啟 PDF</label>
     <input id="file" type="file" accept="application/pdf,.pdf" hidden>
     <span class="fname" id="fname"></span>
     <div class="tools">
-      <button class="btn sm" id="zout" title="縮小" disabled>−</button>
-      <span class="zoomlbl" id="zlbl">—</span>
-      <button class="btn sm" id="zin" title="放大" disabled>＋</button>
-      <button class="btn sm" id="zfit" title="符合寬度" disabled>符合寬度</button>
-      <span class="sep">|</span>
-      <input id="pg" type="number" min="1" value="1" disabled aria-label="頁碼">
-      <span class="sep" id="pgtot">/ –</span>
+      <div class="group">
+        <button id="zout" title="縮小" aria-label="縮小" disabled>−</button>
+        <span class="zoomlbl" id="zlbl">—</span>
+        <button id="zin" title="放大" aria-label="放大" disabled>＋</button>
+        <button id="zfit" title="符合寬度" disabled>符合寬度</button>
+      </div>
+      <div class="group">
+        <input id="pg" type="number" min="1" value="1" disabled aria-label="頁碼">
+        <span class="tot" id="pgtot">/ –</span>
+      </div>
       <button class="btn sm" id="sidetoggle">面板</button>
-      <button class="btn sm" id="setbtn" title="設定" hidden>設定</button>
+      <button class="btn sm" id="setbtn" hidden>設定</button>
     </div>
   </header>
 
   <div class="layout">
     <main class="viewer" id="viewer">
       <div class="empty" id="empty">
-        <h1>用中文輔助閱讀英文文獻</h1>
-        <p>上傳 PDF 後，直接在文件中選取英文單字、專有名詞或句子，側邊欄會顯示繁體中文翻譯；若是專有名詞，還會簡述它在實驗或研究中的意義。查過的詞會自動收進依研究方向分類的生詞表。</p>
-        <div class="drop"><b>把 PDF 拖曳到這裡</b><label class="btn primary" for="file">選擇檔案</label></div>
-        <p style="font-size:13px">PDF 只在你的裝置上開啟，不會上傳；只有你選取的文字（與周圍一小段上下文）會送給 Claude 翻譯。</p>
+        <img class="hero" src="icons/hero.png" alt="">
+        <h1>Read It Easier</h1>
+        <label class="btn primary lg" for="file">開啟 PDF</label>
       </div>
     </main>
 
     <aside class="side" id="side">
       <div class="tabs">
         <button class="tab on" id="tab-tr" data-tab="tr">翻譯</button>
-        <button class="tab" id="tab-vo" data-tab="vo">生詞表 <small id="vcount"></small></button>
+        <button class="tab" id="tab-vo" data-tab="vo">生詞<small id="vcount"></small></button>
+        <button class="tab" id="tab-hl" data-tab="hl">重點句<small id="hcount"></small></button>
         <label class="switch"><input type="checkbox" id="auto"> 自動翻譯</label>
       </div>
       <div class="side-body" id="pane-tr">
@@ -208,32 +238,28 @@ button{cursor:pointer}
   <div class="sheet">
     <h2>設定</h2>
     <h3>翻譯來源</h3>
-    <label class="field">選字後使用
-      <select id="s-src">
-        <option value="free">免費來源：Chrome 內建翻譯＋維基百科＋PubMed（不需金鑰）</option>
-        <option value="google">Google 翻譯＋維基百科＋PubMed（需 Google API 金鑰）</option>
-        <option value="claude">Claude（需 Anthropic API 金鑰）</option>
+    <label class="field">
+      <select id="s-src" aria-label="翻譯來源">
+        <option value="free">免費：Chrome 內建翻譯＋維基百科＋PubMed</option>
+        <option value="google">Google 翻譯＋維基百科＋PubMed</option>
+        <option value="claude">Claude</option>
       </select>
     </label>
-    <p><b>免費來源</b>：電腦版 Chrome 會用瀏覽器內建的翻譯（第一次使用會自動下載翻譯模型），可翻單字與句子；其他瀏覽器與手機沒有內建翻譯，只能查專有名詞。<br><b>Google 翻譯</b>：手機與電腦都能翻單字與句子。<br>以上兩種都會為專有名詞附上維基百科摘要與 PubMed 文獻，但不會依上下文解釋，也不會自動分類生詞。<br><b>Claude</b>：依上下文翻譯、說明專有名詞的實驗意義，並自動把生詞分類。</p>
-    <label class="check"><input type="checkbox" id="s-refs"> 使用 Claude 時，專有名詞也附上維基百科與 PubMed 的參考來源</label>
-    <h3>Google 翻譯 API 金鑰</h3>
-    <p>在 Google Cloud 啟用 Cloud Translation API 後建立的 API 金鑰（每月有免費額度，超過才計費）。建議在 Google Cloud 把金鑰限制為只能用於這個網站與 Cloud Translation API。</p>
-    <label class="field">Google API 金鑰<input id="s-gkey" type="password" placeholder="AIza..." autocomplete="off"></label>
-    <h3>Claude API 金鑰</h3>
-    <p>使用 Claude 需要你自己的 Anthropic API 金鑰（與 Claude 訂閱分開計費）。金鑰只存在這台裝置的瀏覽器裡，不會上傳到其他地方。</p>
-    <label class="field">API 金鑰<input id="s-key" type="password" placeholder="sk-ant-..." autocomplete="off"></label>
-    <label class="field">單字／術語使用的模型<input id="s-mq" type="text"></label>
-    <label class="field">句子與分類整理使用的模型<input id="s-md" type="text"></label>
-    <h3>生詞表備份</h3>
-    <p>生詞表存在這台裝置上。要搬到另一台裝置（例如手機），先在這裡匯出備份檔，再到另一台匯入；匯入會與現有生詞合併。</p>
+    <label class="check"><input type="checkbox" id="s-refs"> Claude 的專有名詞附上維基百科與 PubMed</label>
+    <h3>GOOGLE API 金鑰</h3>
+    <label class="field"><input id="s-gkey" type="password" placeholder="AIza..." autocomplete="off" aria-label="Google API 金鑰"></label>
+    <h3>CLAUDE API 金鑰</h3>
+    <label class="field"><input id="s-key" type="password" placeholder="sk-ant-..." autocomplete="off" aria-label="Claude API 金鑰"></label>
+    <label class="field">單字模型<input id="s-mq" type="text"></label>
+    <label class="field">句子與分類模型<input id="s-md" type="text"></label>
+    <h3>備份</h3>
     <div class="actions" style="margin-top:0">
-      <button class="btn sm" id="s-export">匯出備份檔</button>
-      <label class="btn sm" for="s-import">匯入備份檔</label>
+      <button class="btn sm" id="s-export">匯出備份</button>
+      <label class="btn sm" for="s-import">匯入備份</label>
       <input id="s-import" type="file" accept="application/json,.json" hidden>
-      <button class="btn sm" id="s-tsv">匯出成表格（TSV）</button>
+      <button class="btn sm" id="s-tsv">匯出表格</button>
     </div>
-    <div class="actions" style="justify-content:flex-end;margin-top:20px">
+    <div class="actions" style="justify-content:flex-end;margin-top:22px">
       <button class="btn" id="s-cancel">取消</button>
       <button class="btn primary" id="s-save">儲存</button>
     </div>
@@ -244,7 +270,7 @@ button{cursor:pointer}
 <script>
 (function(){
 "use strict";
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.3.1';
 const $ = s => document.querySelector(s);
 const cur = $('#current');
 function h(tag, attrs, ...kids){
@@ -485,6 +511,7 @@ async function renderPage(n, myGen){
     alignSpans(divs, tc.items, vp.scale);
     tl.append(h('div',{class:'endOfContent'}));
     el.dataset.done='1';
+    applyHighlights(n);
     renderedCount++;
     if(!bannerShown && renderedCount>=Math.min(2,pdfDoc.numPages) && textCount<20){
       bannerShown=true;
@@ -492,6 +519,38 @@ async function renderPage(n, myGen){
     }
   }catch(e){ if(e && e.name!=='RenderingCancelledException') console.error(e); }
   finally{ delete el.dataset.busy; }
+}
+/* Paint the saved key sentences of this document onto page n. Sentences are located by their
+   letters and digits only, so line breaks, hyphenation and spacing differences do not matter. */
+function applyHighlights(n){
+  const el = pageEls[n-1];
+  if(!el || el.dataset.done!=='1') return;
+  el.querySelectorAll('.hl').forEach(x=>x.remove());
+  const sents = Object.values(store.words).filter(w=>w.hl && w.doc===docName && w.page===n);
+  if(!sents.length) return;
+  const tl = el.querySelector('.textLayer'); if(!tl) return;
+  const map=[]; let str='';
+  const walker = document.createTreeWalker(tl, NodeFilter.SHOW_TEXT);
+  for(let node; (node=walker.nextNode()); ){
+    const d = node.data.toLowerCase();
+    for(let i=0;i<d.length;i++){ const c=d.charCodeAt(i); if((c>=97&&c<=122)||(c>=48&&c<=57)){ str+=d[i]; map.push([node,i]); } }
+  }
+  const pr = el.getBoundingClientRect();
+  for(const w of sents){
+    const key = String(w.src||w.original).toLowerCase().replace(/[^a-z0-9]/g,'');
+    if(key.length<4) continue;
+    let i = str.indexOf(key), len = key.length;
+    if(i<0){ i = str.indexOf(key.slice(0,40)); if(i<0) continue; len = Math.min(key.length, str.length-i); }
+    const a = map[i], b = map[i+len-1];
+    const range = document.createRange();
+    range.setStart(a[0],a[1]); range.setEnd(b[0],b[1]+1);
+    for(const rc of range.getClientRects()){
+      if(rc.width<1 || rc.height<1) continue;
+      const d = document.createElement('div'); d.className='hl';
+      d.style.cssText = 'left:'+(rc.left-pr.left)+'px;top:'+(rc.top-pr.top)+'px;width:'+rc.width+'px;height:'+rc.height+'px';
+      el.insertBefore(d, tl);
+    }
+  }
 }
 /* make each selectable span exactly as wide as the glyphs drawn on the canvas */
 function alignSpans(divs, items, sc){
@@ -573,7 +632,7 @@ $('#auto').addEventListener('change',e=>{ settings.auto=e.target.checked; lsSet(
    ===================================================================== */
 const GENERAL='英語學術寫作常用字', UNSORTED='未分類', LS_VOCAB='rie.vocab.v1';
 let store = {v:1, words:{}, lists:[{name:GENERAL, locked:true}]};
-(function(){ const s=lsGet(LS_VOCAB); if(s && s.words && Array.isArray(s.lists)) store=s; })();
+(function(){ const s=lsGet(LS_VOCAB); if(s && s.words && Array.isArray(s.lists)) store=s; store.docs=store.docs||{}; })();
 function saveStore(){ if(!lsSet(LS_VOCAB,store)) toast('無法儲存生詞表（瀏覽器儲存空間不可用）'); }
 function norm(s){ return s.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(); }
 function cleanName(n){ return String(n||'').replace(/[\r\n\t]+/g,' ').trim().slice(0,24); }
@@ -648,6 +707,7 @@ ${lists}
 規則：
 - 一般詞彙或句子的 term 必須為 null；專有名詞、學術術語、縮寫、實驗方法、試劑、儀器、基因或蛋白質名稱，kind 設為 "term" 並填寫 term。
 - list 的決定方式：非特定領域的一般學術用字、連接詞、寫作句型 → 「${GENERAL}」。專業詞彙依研究方向歸類：優先放進上面現有清單中合適的一份；都不合適才取一個新的清單名稱（繁體中文、簡短的研究方向名稱，例如「神經科學」「奈米材料」「無機化學合成」）。新清單的範圍粗細要比照使用者現有的清單：現有清單分得細就取細的名稱，分得粗或還沒有專業清單就取較廣的領域名稱。
+- 選取的是句子時，list 依這句話談的研究主題歸類（同樣優先用現有清單）；與特定領域無關、主要可當寫作句型參考的句子 → 「${GENERAL}」。
 - 所有中文一律使用繁體中文與臺灣慣用學術譯名，不使用簡體字或中國大陸用語。
 - 不確定時請在 note 中誠實說明，不要捏造。`;
 }
@@ -683,9 +743,14 @@ async function lookup(sel){
   try{
     const data = await askJSON(buildPrompt(sel.text,ctx), sel.text.length>120 ? 'default' : 'quick', ctl.signal);
     if(mine!==reqId) return;
-    const r = normalize(data, sel);
+    const r = normalize(data, sel); r.src = sel.text;
     const long = r.kind==='sentence' || r.original.length>80;
-    const w = long ? r : (upsertWord(r, data && data.list) || r);
+    let w;
+    if(long){
+      r.kind='sentence'; r.listSuggest = cleanName(data && data.list);
+      const old = store.words[norm(r.original)];
+      w = old && old.hl ? old : r;
+    }else w = upsertWord(r, data && data.list) || r;
     renderCard(w);
     renderVocab();
     if(canFetchRefs && settings.refs && w.kind==='term') attachRefs(w, ctl.signal);
@@ -739,26 +804,76 @@ async function attachRefs(w, signal){
 /* =====================================================================
    Sidebar: translation card
    ===================================================================== */
+/* =====================================================================
+   Key sentences (Claude only): highlight, file into a list, attach the paper as source
+   ===================================================================== */
+const citeBusy = new Set();
+function docInfo(name){ return (store.docs && store.docs[name]) || null; }
+function shortCite(w){ const d=docInfo(w.doc); return [(d&&d.short)||w.doc||'', w.page?'p. '+w.page:''].filter(Boolean).join(', '); }
+function fullCite(w){ const d=docInfo(w.doc); return (d&&d.cite)||w.doc||''; }
+function citeText(w){ return '“'+w.original+'” ('+shortCite(w)+')\n'+w.translation+'\n來源：'+fullCite(w); }
+function refreshCard(doc){ const k=cur.dataset.k; if(k && store.words[k] && (!doc || store.words[k].doc===doc)) renderCard(store.words[k]); }
+function markSentence(r){
+  const w = upsertWord(Object.assign({}, r, {kind:'sentence', hl:true}), r.listSuggest || UNSORTED);
+  if(!w) return;
+  renderCard(w); renderVocab(); applyHighlights(w.page);
+  toast('已標記，收進「'+w.list+'」');
+  ensureCitation(w.doc);
+}
+/* Work out the paper's reference once per PDF, from its first page and embedded metadata. */
+async function ensureCitation(name){
+  if(!name || !pdfDoc || name!==docName || citeBusy.has(name)) return;
+  const d = docInfo(name); if(d && d.cite) return;
+  citeBusy.add(name); refreshCard(name);
+  let cite=name, short=name;
+  try{
+    let meta='';
+    try{ const m = await pdfDoc.getMetadata(); const i=(m&&m.info)||{}; meta=[i.Title&&('Title: '+i.Title), i.Author&&('Author: '+i.Author), i.Subject&&('Subject: '+i.Subject)].filter(Boolean).join('\n'); }catch(e){}
+    let first = pageTexts[1];
+    if(!first){ const p=await pdfDoc.getPage(1); const tc=await p.getTextContent(); first=pageTexts[1]=tc.items.map(i=>i.str).join(' ').replace(/\s+/g,' '); }
+    const out = await askJSON(`以下是一篇學術論文 PDF 的檔名、內嵌資訊與第一頁文字。請辨識這篇文獻，只回傳一個 JSON 物件：
+{"cite": "APA 第七版格式的完整引用（作者、年份、標題、期刊、卷期頁碼、DOI，資料中有的才寫）", "short": "文內引用的寫法，例如 Schneider et al., 2021（不要加括號）"}
+只能根據下面提供的內容，看不出來的欄位直接省略，不可猜測或捏造；完全無法判斷時，cite 與 short 都填檔名。
+
+檔名：${name}
+PDF 內嵌資訊：
+${meta||'（無）'}
+第一頁文字：
+${String(first||'').slice(0,3500)}`, 'default');
+    if(out && out.cite) cite=String(out.cite).trim()||name;
+    if(out && out.short) short=String(out.short).replace(/^[（(]|[)）]$/g,'').trim()||name;
+  }catch(e){}
+  store.docs[name] = {cite, short}; saveStore();
+  citeBusy.delete(name); refreshCard(name); renderVocab();
+}
+function sourceBox(w){
+  const box = h('div',{class:'srcbox'});
+  const view = ()=>{
+    box.textContent='';
+    box.append(h('h3',null,'文獻來源', w.doc && !citeBusy.has(w.doc) && h('button',{class:'linkbtn',onclick:edit},'編輯')),
+      ...(citeBusy.has(w.doc) ? [h('div',{class:'cite'},'辨識中…')] : [h('div',{class:'short'},'('+shortCite(w)+')'), h('div',{class:'cite'},fullCite(w))]));
+  };
+  const edit = ()=>{
+    const d = docInfo(w.doc) || {cite:w.doc, short:w.doc};
+    const ta = h('textarea',{'aria-label':'完整引用'}); ta.value = d.cite;
+    const si = h('input',{class:'inp',type:'text','aria-label':'文內引用',style:'width:100%;margin-top:6px'}); si.value = d.short;
+    box.textContent='';
+    box.append(h('h3',null,'文獻來源'), ta, si, h('div',{class:'actions',style:'margin-top:8px'},
+      h('button',{class:'btn sm primary',onclick:()=>{ store.docs[w.doc]={cite:ta.value.trim()||w.doc, short:si.value.trim()||w.doc, manual:true}; saveStore(); view(); renderVocab(); }},'儲存'),
+      h('button',{class:'btn sm',onclick:view},'取消')));
+  };
+  view();
+  return box;
+}
+
 const KIND = {word:'單字',term:'專有名詞',phrase:'詞組',sentence:'句子'};
 function renderIdle(){
-  cur.textContent='';
-  if(inClaude && !sample){ cur.append(h('div',{class:'hint'},'此環境無法使用翻譯功能（仍可閱讀 PDF 與查看生詞表）。')); return; }
-  if(source()==='claude' && !inClaude && !settings.apiKey){
-    cur.append(h('div',{class:'hint'},'翻譯來源設為 Claude，但還沒有填 API 金鑰。請到設定填入金鑰，或改用免費來源（維基百科＋PubMed）。',h('div',{class:'actions'},h('button',{class:'btn primary sm',onclick:openSettings},'前往設定'))));
-    return;
-  }
-  if(source()==='google' && !settings.googleKey){
-    cur.append(h('div',{class:'hint'},'翻譯來源設為 Google 翻譯，但還沒有填 Google API 金鑰。請到設定填入金鑰，或改用其他來源。',h('div',{class:'actions'},h('button',{class:'btn primary sm',onclick:openSettings},'前往設定'))));
-    return;
-  }
-  if(source()!=='claude'){
-    const how = source()==='google' ? '目前使用 Google 翻譯，專有名詞會附上維基百科摘要與 PubMed 文獻。'
-      : hasChromeTr ? '目前使用免費來源：Chrome 內建翻譯，專有名詞會附上維基百科摘要與 PubMed 文獻。'
-      : '目前使用免費來源，但這個瀏覽器沒有內建翻譯，只能查專有名詞（維基百科＋PubMed）。要翻譯單字與句子，可到「設定」改用 Google 翻譯或 Claude。';
-    cur.append(h('div',{class:'hint'},'在 PDF 中',h('b',null,'選取文字'),'，再按出現的「翻譯」按鈕。',h('br'),how,h('br'),'要依上下文解釋並自動分類生詞，可改用 Claude。',h('div',{class:'actions'},h('button',{class:'btn sm',onclick:openSettings},'設定'))));
-    return;
-  }
-  cur.append(h('div',{class:'hint'},'在 PDF 中',h('b',null,'選取文字'),'（滑鼠拖曳、雙擊單字，或手機長按），再按出現的「翻譯」按鈕。也可以打開上方的「自動翻譯」。',h('br'),'查過的單字與專有名詞會自動收進「生詞表」，並依研究方向分類。'));
+  cur.textContent=''; cur.dataset.k='';
+  const need = (inClaude && !sample) ? '無法使用翻譯'
+    : (source()==='claude' && !inClaude && !settings.apiKey) ? '尚未設定 Claude 金鑰'
+    : (source()==='google' && !settings.googleKey) ? '尚未設定 Google 金鑰' : '';
+  cur.append(h('div',{class:'idle'}, need || '選取文字'));
+  if(need && !inClaude) cur.append(h('div',{class:'actions',style:'justify-content:center;margin-top:0'},h('button',{class:'btn primary sm',onclick:openSettings},'設定')));
 }
 function renderLoading(text){
   cur.textContent='';
@@ -814,11 +929,11 @@ function refsBox(r){
   const wk = f.wiki, pm = f.pubmed;
   if(!wk && !(pm && (pm.count || pm.items.length))) return null;
   return h('div',{class:'refbox'},
-    h('h3',null,'參考來源'),
+    h('h3',null,'參考來源（維基百科 CC BY-SA）'),
     wk && h('div',{class:'row'}, '維基百科：',
       wk.zhUrl ? link(wk.zhUrl, wk.zhTitle) : h('span',{class:'src'},'沒有中文條目'),
       '　', link(wk.url, wk.title+'（英文）'),
-      r.free && h('div',{class:'src'},'維基百科摘要（CC BY-SA）是搜尋到的條目內容，不是依上下文的解釋，請確認條目與原文所指相同。')),
+      ),
     pm && h('div',{class:'row'}, 'PubMed：', link(pm.url, pm.count ? '標題或摘要含此詞的文獻約 '+pm.count.toLocaleString()+' 篇' : '查無文獻'),
       pm.items.length>0 && h('ul',null, pm.items.map(x=>h('li',null, link('https://pubmed.ncbi.nlm.nih.gov/'+x.pmid+'/', x.title), ' ', h('span',{class:'src'},[x.journal,x.year].filter(Boolean).join(' '))))))
   );
@@ -829,7 +944,7 @@ function renderCard(r){
   cur.dataset.o = r.original;
   const long = r.kind==='sentence' || r.original.length>60;
   const meta = h('div',{class:'meta'},
-    h('span',{class:'chip'+(r.kind==='term'?' term':' plain')},KIND[r.kind]),
+    h('span',{class:'chip'+(r.hl?' hlchip':r.kind==='term'?' term':' plain')}, r.hl?'重點句':KIND[r.kind]),
     r.pos && h('span',null,r.pos),
     r.pronunciation && h('span',null,/^[\/\[]/.test(r.pronunciation)?r.pronunciation:'/'+r.pronunciation+'/'),
     r.page && h('span',null,'第 '+r.page+' 頁'),
@@ -847,53 +962,54 @@ function renderCard(r){
       r.term.related.length>0 && h('div',{class:'chips'},r.term.related.map(x=>h('span',{class:'chip plain'},x)))),
     r.note && h('div',{class:'sub'},h('b',null,'補充　'),r.note),
     refsBox(r),
+    saved && r.hl && sourceBox(r),
     saved && listPicker(r),
     h('div',{class:'actions'},
-      h('button',{class:'btn sm',onclick:()=>copyText(r.original+'\n'+r.translation+(r.term&&r.term.meaning?'\n'+r.term.meaning:''))},'複製'),
+      !saved && r.kind==='sentence' && source()==='claude' && canAsk() && h('button',{class:'btn sm primary',onclick:()=>markSentence(r)},'標記重點'),
+      h('button',{class:'btn sm',onclick:()=>copyText(saved && r.hl ? citeText(r) : r.original+'\n'+r.translation+(r.term&&r.term.meaning?'\n'+r.term.meaning:''))}, saved && r.hl ? '複製（含來源）' : '複製'),
       canFetchRefs && !r.refs && !long && h('button',{class:'btn sm',onclick:e=>{ e.target.disabled=true; e.target.textContent='查詢中…'; attachRefs(r).then(()=>{ if(!r.refs){ e.target.textContent='查不到參考來源'; } }); }},'查維基百科與 PubMed'),
-      saved && h('button',{class:'btn sm danger',onclick:()=>{ delete store.words[r.k]; pruneLists(); saveStore(); renderVocab(); renderIdle(); toast('已從生詞表移除'); }},'從生詞表移除')));
+      saved && h('button',{class:'btn sm danger',onclick:()=>{ delete store.words[r.k]; pruneLists(); saveStore(); renderVocab(); renderIdle(); if(r.hl) applyHighlights(r.page); toast('已移除'); }},'移除')));
   cur.textContent=''; cur.append(card);
 }
 
 /* =====================================================================
    Sidebar: vocabulary lists
    ===================================================================== */
-let vf = 'all', reorgBusy=false, renaming=false;
+let vf = 'all', vtype = 'vo', reorgBusy=false, renaming=false;   // vtype: 'vo' words & terms, 'hl' key sentences
 function showTab(t){
-  $('#tab-tr').classList.toggle('on',t==='tr'); $('#tab-vo').classList.toggle('on',t==='vo');
-  $('#pane-tr').hidden = t!=='tr'; $('#pane-vo').hidden = t!=='vo';
+  if(t!=='tr'){ if(vtype!==t){ vtype=t; vf='all'; renaming=false; } renderVocab(); }
+  for(const k of ['tr','vo','hl']) $('#tab-'+k).classList.toggle('on',t===k);
+  $('#pane-tr').hidden = t!=='tr'; $('#pane-vo').hidden = t==='tr';
 }
 document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{ showTab(b.dataset.tab); if(matchMedia('(max-width:860px)').matches) $('#side').classList.remove('collapsed'); }));
-function wordsFor(f){
-  const ws = allWords();
-  if(f==='all') return ws;
-  if(f==='star') return ws.filter(w=>w.starred);
-  return ws.filter(w=>w.list===f);
-}
-function toTSV(ws){ return ws.map(w=>[w.original,w.translation,w.list,w.starred?'★':'',(w.term&&w.term.meaning)||''].map(x=>String(x).replace(/[\t\r\n]+/g,' ')).join('\t')).join('\n'); }
+function toTSV(ws){ return ws.map(w=>[w.original,w.translation,w.list,w.starred?'★':'', w.hl ? fullCite(w)+(w.page?' p. '+w.page:'') : ((w.term&&w.term.meaning)||'')].map(x=>String(x).replace(/[\t\r\n]+/g,' ')).join('\t')).join('\n'); }
 function renderVocab(){
-  const ws = allWords(), counts = listCounts();
-  $('#vcount').textContent = ws.length ? '('+ws.length+')' : '';
-  if(vf!=='all' && vf!=='star' && !counts.has(vf)) vf='all';
+  const all = allWords(), global = listCounts();
+  const nH = all.filter(w=>w.hl).length, nW = all.length-nH;
+  $('#vcount').textContent = nW||''; $('#hcount').textContent = nH||'';
+  const ws = all.filter(w=>!!w.hl===(vtype==='hl'));
+  const counts = new Map(); for(const w of ws) counts.set(w.list,(counts.get(w.list)||0)+1);
+  if(vf!=='all' && vf!=='star' && !global.has(vf)) vf='all';
+  const isList = vf!=='all' && vf!=='star';
+  const shown = vf==='all' ? ws : vf==='star' ? ws.filter(w=>w.starred) : ws.filter(w=>w.list===vf);
+
   const F = $('#filters'); F.textContent='';
   const chip = (id,label,n)=>h('button',{class:'fchip'+(vf===id?' on':''),onclick:()=>{ vf=id; renaming=false; renderVocab(); }},label,h('small',null,n));
-  F.append(chip('all','全部',ws.length), chip('star','★ 星號',ws.filter(w=>w.starred).length));
-  for(const [n,c] of counts) F.append(chip(n,n,c));
+  if(ws.length || isList){
+    F.append(chip('all','全部',ws.length), chip('star','★',ws.filter(w=>w.starred).length));
+    for(const l of store.lists) if(counts.get(l.name) || l.name===vf) F.append(chip(l.name,l.name,counts.get(l.name)||0));
+  }
 
   const S = $('#suggest'); S.textContent='';
-  const big = [...counts].find(([n,c])=>n!==GENERAL && c>40);
-  const small = [...counts].filter(([n,c])=>c>0 && c<3 && n!==GENERAL).length;
+  const big = [...global].find(([n,c])=>n!==GENERAL && c>40);
+  const small = [...global].filter(([n,c])=>c>0 && c<3 && n!==GENERAL).length;
   if(canAsk() && !reorgBusy && (big || small>=4)){
-    S.append(h('div',{class:'suggest'},
-      big ? '「'+big[0]+'」已有 '+big[1]+' 個詞，可以細分成更精確的清單。' : '有 '+small+' 份清單只有一兩個詞，可以合併整理。',
-      h('button',{class:'btn sm primary',onclick:reorganize},'整理')));
+    S.append(h('div',{class:'suggest'}, big ? '「'+big[0]+'」可以細分' : '零星清單可以合併', h('button',{class:'btn sm primary',onclick:reorganize},'整理')));
   }
 
   const T = $('#vtools'); T.textContent='';
-  const shown = wordsFor(vf);
-  const isList = vf!=='all' && vf!=='star';
   if(renaming && isList){
-    const inp = h('input',{type:'text',value:vf,maxlength:24,style:'border:1px solid var(--line);border-radius:8px;padding:4px 8px;flex:1;min-width:0'});
+    const inp = h('input',{class:'inp',type:'text',value:vf,maxlength:24,style:'flex:1'});
     const go = ()=>{
       const n = cleanName(inp.value); renaming=false;
       if(n && n!==vf){
@@ -907,21 +1023,18 @@ function renderVocab(){
     inp.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); });
     T.append(inp, h('button',{class:'btn sm primary',onclick:go},'確定'), h('button',{class:'btn sm',onclick:()=>{ renaming=false; renderVocab(); }},'取消'));
   }else{
-    if(ws.length>=4) T.append(h('button',{class:'btn sm',disabled:reorgBusy||!canAsk(),onclick:reorganize,title:'依照目前的字數與你的分類習慣，重新決定清單的粗細'}, reorgBusy?'整理中…':'重新整理分類'));
+    if(all.length>=4) T.append(h('button',{class:'btn sm',disabled:reorgBusy||!canAsk(),onclick:reorganize}, reorgBusy?'整理中…':'重新整理分類'));
     if(isList) T.append(h('button',{class:'btn sm',onclick:()=>{ renaming=true; renderVocab(); }},'重新命名'));
-    if(isList && shown.length===0 && vf!==GENERAL) T.append(h('button',{class:'btn sm danger',onclick:()=>{ store.lists=store.lists.filter(l=>l.name!==vf); vf='all'; saveStore(); renderVocab(); }},'刪除清單'));
-    if(shown.length) T.append(h('button',{class:'btn sm',onclick:()=>copyText(toTSV(shown.slice().reverse()))},'複製這份清單'));
+    if(isList && !(global.get(vf)>0) && vf!==GENERAL) T.append(h('button',{class:'btn sm danger',onclick:()=>{ store.lists=store.lists.filter(l=>l.name!==vf); vf='all'; saveStore(); renderVocab(); }},'刪除清單'));
+    if(shown.length) T.append(h('button',{class:'btn sm',onclick:()=>copyText(vtype==='hl' ? shown.slice().reverse().map(citeText).join('\n\n') : toTSV(shown.slice().reverse()))},'複製清單'));
   }
 
   const L = $('#vlist'); L.textContent='';
-  if(!shown.length){
-    L.append(h('div',{class:'hint'}, ws.length ? '這裡還沒有詞。' : '還沒有生詞。在 PDF 中選字翻譯後，單字與專有名詞會自動收進這裡，並依研究方向分成一份份清單；點 ☆ 可以加星號。'));
-    return;
-  }
+  if(!shown.length){ L.append(h('div',{class:'idle'}, vtype==='hl' ? '尚無重點句' : '尚無生詞')); return; }
   for(const w of shown){
-    L.append(h('li',{onclick:()=>{ renderCard(w); showTab('tr'); }},
+    L.append(h('li',{class:w.hl?'sent':'',onclick:()=>{ renderCard(w); showTab('tr'); }},
       starButton(w),
-      h('div',{style:'min-width:0'}, h('div',{class:'o'},w.original), h('div',{class:'t'},w.translation)),
+      h('div',{style:'min-width:0'}, h('div',{class:'o'},w.original), h('div',{class:'t'}, w.hl ? '('+shortCite(w)+')' : w.translation)),
       !isList && h('span',{class:'l'},w.list)));
   }
 }
@@ -935,8 +1048,8 @@ async function reorganize(){
   if(ws.length<4){ toast('生詞還太少，不需要整理'); return; }
   reorgBusy=true; renderVocab();
   const locked = store.lists.filter(l=>l.locked).map(l=>l.name);
-  const lines = ws.map((w,i)=>[i,w.original,w.translation,(w.term&&w.term.field)||'',w.list,w.manual?'固定':''].join('\t')).join('\n');
-  const prompt = `你要幫一位台灣研究生整理英文文獻生詞表，把每個詞分到依「研究方向」命名的清單中。
+  const lines = ws.map((w,i)=>[i,w.original.slice(0,90),w.translation.slice(0,60),(w.term&&w.term.field)||'',w.list,w.manual?'固定':''].join('\t')).join('\n');
+  const prompt = `你要幫一位台灣研究生整理英文文獻的生詞與重點句，把每一筆分到依「研究方向」命名的清單中（較長的是重點句，依它談的研究主題分類）。
 
 目前的生詞（每行：編號、原文、翻譯、領域、目前清單、是否固定）：
 ${lines}
@@ -997,7 +1110,7 @@ function download(name, text, type){
   document.body.append(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
 }
 $('#s-export').onclick=()=>download('read-it-easier-vocab-'+new Date().toISOString().slice(0,10)+'.json', JSON.stringify(store), 'application/json');
-$('#s-tsv').onclick=()=>download('read-it-easier-vocab.tsv', '﻿原文\t翻譯\t清單\t星號\t說明\n'+toTSV(allWords().reverse()), 'text/tab-separated-values');
+$('#s-tsv').onclick=()=>download('read-it-easier-vocab.tsv', '﻿原文\t翻譯\t清單\t星號\t說明或來源\n'+toTSV(allWords().reverse()), 'text/tab-separated-values');
 $('#s-import').addEventListener('change',async e=>{
   const f=e.target.files[0]; e.target.value=''; if(!f) return;
   try{
@@ -1005,6 +1118,7 @@ $('#s-import').addEventListener('change',async e=>{
     if(!d || typeof d.words!=='object') throw 0;
     let n=0;
     for(const l of (d.lists||[])) if(l && l.name) ensureList(l.name, l.locked);
+    for(const [k,v] of Object.entries(d.docs||{})) if(v && v.cite && !(store.docs[k] && store.docs[k].manual)) store.docs[k]=v;
     for(const [k,w] of Object.entries(d.words)){
       if(!w || !w.original) continue;
       const old = store.words[k];
